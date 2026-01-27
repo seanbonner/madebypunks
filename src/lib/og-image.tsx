@@ -15,6 +15,14 @@ interface OGImageProps {
   twitter?: string;
 }
 
+interface ProjectOGImageProps {
+  name: string;
+  description: string;
+  thumbnail?: string;
+  punkId: number;
+  tags?: string[];
+}
+
 function getPunkImageUrl(punkId: number) {
   return `https://punks.art/api/punks/${punkId}?format=png&size=240&background=v2`;
 }
@@ -293,6 +301,294 @@ export async function generateOGImage(
               {subtitle}
             </div>
           )}
+        </div>
+      </div>
+    ),
+    { width, height }
+  );
+}
+
+export async function generateProjectOGImage(
+  props: ProjectOGImageProps,
+  options: OGImageOptions,
+  siteUrl: string
+): Promise<ImageResponse> {
+  const { width, height } = options;
+  const { name, description, thumbnail, punkId, tags } = props;
+
+  // Only use local thumbnails (starting with /) to avoid external image loading issues
+  const isLocalThumbnail = thumbnail?.startsWith("/");
+
+  // If local thumbnail exists, show it prominently
+  if (isLocalThumbnail && thumbnail) {
+    const thumbnailUrl = `${siteUrl}${thumbnail}`;
+
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            height: "100%",
+            width: "100%",
+            display: "flex",
+            backgroundColor: COLORS.punkBlue,
+          }}
+        >
+          {/* Thumbnail - left side */}
+          <div
+            style={{
+              width: "60%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px",
+            }}
+          >
+            <img
+              src={thumbnailUrl}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                border: "8px solid #000",
+                boxShadow: "8px 8px 0 0 rgba(0,0,0,0.4)",
+              }}
+            />
+          </div>
+
+          {/* Info - right side */}
+          <div
+            style={{
+              width: "40%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              padding: "40px 40px 40px 0",
+            }}
+          >
+            {/* Project name */}
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 900,
+                color: "white",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+                textShadow: "4px 4px 0 #000",
+                lineHeight: 1.1,
+              }}
+            >
+              {name}
+            </div>
+
+            {/* Description */}
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 500,
+                color: "white",
+                marginTop: "16px",
+                opacity: 0.8,
+                lineHeight: 1.4,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {description}
+            </div>
+
+            {/* Tags */}
+            {tags && tags.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "24px",
+                }}
+              >
+                {tags.slice(0, 3).map((tag, i) => (
+                  <div
+                    key={tag}
+                    style={{
+                      backgroundColor: i % 2 === 0 ? "#fff" : COLORS.punkPink,
+                      color: i % 2 === 0 ? COLORS.punkBlue : "#fff",
+                      border: "3px solid #000",
+                      padding: "6px 12px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {tag}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Punk avatar + branding */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginTop: "32px",
+                gap: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  border: "4px solid #000",
+                }}
+              >
+                <img
+                  src={getPunkImageUrl(punkId)}
+                  width={60}
+                  height={60}
+                  style={{
+                    imageRendering: "pixelated",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: "white",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  opacity: 0.6,
+                }}
+              >
+                Made by Punks
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      { width, height }
+    );
+  }
+
+  // Fallback: text-only with punk avatar
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: COLORS.punkBlue,
+          padding: "60px",
+        }}
+      >
+        {/* Punk avatar */}
+        <div
+          style={{
+            display: "flex",
+            flexShrink: 0,
+            border: "8px solid #000",
+            boxShadow: "8px 8px 0 0 rgba(0,0,0,0.4)",
+            marginRight: "60px",
+          }}
+        >
+          <img
+            src={getPunkImageUrl(punkId)}
+            width={300}
+            height={300}
+            style={{
+              imageRendering: "pixelated",
+            }}
+          />
+        </div>
+
+        {/* Info */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            flex: 1,
+          }}
+        >
+          {/* Project name */}
+          <div
+            style={{
+              fontSize: 64,
+              fontWeight: 900,
+              color: "white",
+              textTransform: "uppercase",
+              letterSpacing: "0.02em",
+              textShadow: "4px 4px 0 #000",
+              lineHeight: 1.1,
+            }}
+          >
+            {name}
+          </div>
+
+          {/* Description */}
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 500,
+              color: "white",
+              marginTop: "20px",
+              opacity: 0.8,
+              lineHeight: 1.4,
+              maxWidth: "600px",
+            }}
+          >
+            {description}
+          </div>
+
+          {/* Tags */}
+          {tags && tags.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "12px",
+                marginTop: "32px",
+              }}
+            >
+              {tags.slice(0, 4).map((tag, i) => (
+                <div
+                  key={tag}
+                  style={{
+                    backgroundColor: i % 2 === 0 ? "#fff" : COLORS.punkPink,
+                    color: i % 2 === 0 ? COLORS.punkBlue : "#fff",
+                    border: "4px solid #000",
+                    padding: "8px 16px",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {tag}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Branding */}
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: "white",
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              marginTop: "40px",
+              opacity: 0.5,
+            }}
+          >
+            Made by Punks
+          </div>
         </div>
       </div>
     ),
