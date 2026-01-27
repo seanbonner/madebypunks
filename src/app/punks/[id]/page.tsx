@@ -35,13 +35,11 @@ export async function generateMetadata({
     openGraph: {
       title: `${name} | Made by Punks`,
       description,
-      images: [`https://punks.art/api/punks/${punkId}`],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: `${name} | Made by Punks`,
       description,
-      images: [`https://punks.art/api/punks/${punkId}`],
     },
   };
 }

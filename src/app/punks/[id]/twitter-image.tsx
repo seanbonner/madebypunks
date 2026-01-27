@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { generateOGImage } from "@/lib/og-image";
 import { getPunkById } from "@/data/projects";
-import { COLORS, SITE_NAME } from "@/lib/constants";
+import { COLORS } from "@/lib/constants";
 
 export const runtime = "edge";
 
@@ -46,14 +46,13 @@ export default async function Image({
   }
 
   const name = punk.name || `Punk #${punkId}`;
-  const projectCount = punk.projects.length;
-  const subtitle = `${projectCount} project${projectCount !== 1 ? "s" : ""} • ${SITE_NAME}`;
 
   return generateOGImage(
     {
       title: name,
-      subtitle,
       punkId,
+      projectCount: punk.projects.length,
+      twitter: punk.twitter,
     },
     size
   );
