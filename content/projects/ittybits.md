@@ -8,7 +8,7 @@ launchDate: 2023-01-01T00:00:00.000Z
 tags:
   - Art
   - Derivative
-  - On-chain
+  - Pixel
 twitter: posvar
 creators:
   - 7741

@@ -4,9 +4,9 @@ description: A network visualization showing how CryptoPunks flow between collec
 url: https://punkverse.junkdrawer.wtf/
 launchDate: 2023-01-01
 tags:
-  - Analytics
+  - Collector
   - Visualization
-  - Network
+  - Community
 twitter: doyle126
 creators:
   - 5671

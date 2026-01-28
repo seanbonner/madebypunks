@@ -7,7 +7,7 @@ url: 'https://cryptopunks.eth.limo/'
 launchDate: 2023-01-01T00:00:00.000Z
 tags:
   - Marketplace
-  - ENS
+  - Decentralized
   - Trading
 creators:
   - 3900

@@ -4,7 +4,7 @@ description: Visualize the complete ownership history of each CryptoPunk as they
 url: https://punks.junkdrawer.wtf/
 launchDate: 2023-01-01
 tags:
-  - Analytics
+  - Archive
   - Explorer
   - History
 twitter: doyle126

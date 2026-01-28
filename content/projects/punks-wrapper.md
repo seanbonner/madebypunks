@@ -7,8 +7,8 @@ url: 'https://punks.swap.kiwi'
 launchDate: 2021-01-01T00:00:00.000Z
 tags:
   - Wrapper
-  - ERC-721
-  - DeFi
+  - Trading
+  - Utility
 creators:
   - 2460
 thumbnail: /projects/punks-wrapper.png

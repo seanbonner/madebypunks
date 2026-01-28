@@ -6,7 +6,7 @@ url: https://punk.cam
 launchDate: 2023-06-01
 tags:
   - Camera
-  - AI
+  - Playful
   - Fun
 twitter: PUNK_CAM
 creators:

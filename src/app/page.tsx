@@ -76,13 +76,13 @@ export default function HomePage() {
         <section className="bg-punk-pink">
           <div className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 lg:px-8">
             <h2 className="text-xl font-bold uppercase tracking-wider text-white drop-shadow-[2px_2px_0_rgba(0,0,0,0.2)]">
-              Building something with Punks?
+              Creating something with your punk?
             </h2>
             <p className="mt-3 text-white/90 text-base max-w-lg mx-auto">
-              This directory belongs to the community. Add your project via PR.
+              This directory belongs to the community. Share your work here.
             </p>
             <Button href="/add" variant="white" size="sm" className="mt-6 text-punk-pink">
-              Add Project →
+              Share Your Work →
             </Button>
           </div>
         </section>

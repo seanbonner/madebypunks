@@ -34,7 +34,7 @@ export function PunkBadge({
         <div>
           <div className={`${config.text} font-bold uppercase tracking-wider group-hover:text-punk-pink transition-colors flex items-baseline gap-2`}>
             <span>{punk.name || `Punk #${punk.id}`}</span>
-            <span className="text-sm font-medium opacity-60 group-hover:text-punk-blue group-hover:opacity-100 transition-all">
+            <span className={`${config.text} font-medium opacity-60 group-hover:text-punk-blue group-hover:opacity-100 transition-all`}>
               #{punk.id}
             </span>
           </div>

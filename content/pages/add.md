@@ -2,218 +2,137 @@
 title: Add Your Project
 ---
 
-# Made by Punks
+# Share Your Work
 
-A trustless, community-owned directory.
+Made by Punks is a community space for creators. If you hold a CryptoPunk and you've made something—art, music, writing, video, tools, anything—we want to feature it here.
 
 ---
 
-## The Punk Spirit
+## What Counts as a Project?
 
-CryptoPunks belong to no one and everyone. They are a piece of internet history, a cultural artifact that sparked a movement. This directory exists to celebrate the builders who keep that spirit alive.
+Anything you've created. Seriously.
 
-**Made by Punks is not a company.** There is no team, no token, no roadmap. It's a public good maintained by the community, for the community.
+- **Art** - Illustrations, animations, remixes, derivatives
+- **Writing** - Books, essays, zines, poetry
+- **Film** - Documentaries, videos, short films
+- **Music** - Albums, singles, soundscapes
+- **Physical goods** - Prints, merch, collectibles
+- **Tools** - Apps, websites, utilities
+- **Community projects** - Events, collabs, initiatives
 
-- **Trustless** - All data lives in markdown files on GitHub. No database, no backend, no single point of failure.
-- **Permissionless** - Anyone can add their punk profile and projects via pull request.
-- **Decentralized** - Fork it, remix it, make it your own. The code is MIT licensed.
-- **Community-owned** - Maintainers are punk holders who volunteer their time.
+If you made it and you're a punk holder, it belongs here.
 
-This is lore that belongs to everyone. Take it and build.
+---
+
+## Two Ways to Add Your Project
+
+### Option 1: Fill Out a Form (Easy)
+
+Not comfortable with GitHub? No problem. Fill out [this form](https://github.com/madebypunks/directory/issues/new?template=project-submission.md&title=New+Project:+[Your+Project+Name]) and we'll add your project for you.
+
+Just tell us:
+- Your punk ID
+- Project name
+- What it is (a sentence or two)
+- Website or link
+- Your Twitter handle (optional)
+- A thumbnail image (optional)
+
+A maintainer will take it from there.
+
+### Option 2: Submit via GitHub (For Those Who Know Git)
+
+If you're comfortable with GitHub, you can add your project directly:
+
+1. **Fork** the [repository](https://github.com/madebypunks/directory)
+2. **Create** a file in `content/projects/your-project.md`
+3. **Add** your project info (see format below)
+4. **Submit** a pull request
+
+That's it. No gatekeepers, no approvals process. Just git.
+
+---
+
+## Project File Format
+
+```
+---
+name: Your Project Name
+description: A brief description (1-2 sentences)
+url: https://your-project.com
+launchDate: 2024-01-15
+tags:
+  - Art
+  - Book
+  - Film
+creators:
+  - 1234
+twitter: your_handle
+---
+
+Write more about your project here if you want.
+```
+
+**Tags to choose from:**
+Art, Book, Film, Documentary, Music, Photography, Animation, Illustration, Derivative, Generative, History, Guide, Education, Creation, Memes, Fun, Playful, Community, Collector, Marketplace, Explorer, Archive
 
 ---
 
 ## Add Your Punk Profile
 
-Every punk can have their own page - like MySpace, but on-chain adjacent.
-
-### 1. Fork the Repository
-
-Go to [github.com/madebypunks/directory](https://github.com/madebypunks/directory) and fork the repo.
-
-### 2. Create Your Punk File
-
-Create a file `content/punks/[YOUR_PUNK_ID].md`
-
-For example, if you own Punk #1234:
+Want your own page? Create `content/punks/[YOUR_PUNK_ID].md`:
 
 ```
-content/punks/1234.md
-```
-
-### 3. Add Your Profile
-
-Write your markdown file:
-
-```md
 ---
 name: Your Name
 twitter: your_handle
 website: https://your-site.com
 ---
 
-Write anything you want here! This is your MySpace page.
-
-Share your story, your vision, your memes. Use markdown to format your content however you like.
+Write anything you want here. This is your space.
 ```
 
-**Available fields:**
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | No | Your display name |
-| `twitter` | No | Twitter/X handle (without @) |
-| `website` | No | Your personal website |
-
-The content below the `---` is your bio. Go wild.
-
 ---
 
-## Add Your Projects
+## Collabs Welcome
 
-Each project gets its own markdown file in `content/projects/`.
+Projects can have multiple creators. List all the punk IDs:
 
-### Create a Project File
-
-Create `content/projects/your-project-slug.md`:
-
-> **Important:** The filename becomes the URL slug (e.g., `/p/your-project-slug`). Make sure it's unique!
-
-```md
----
-name: My Project
-description: A brief description of what it does.
-thumbnail: /projects/my-project.png
-url: https://my-project.com
-launchDate: 2024-01-15
-tags:
-  - Tool
-  - Art
+```
 creators:
   - 1234
-twitter: project_handle
-github: https://github.com/user/repo
-discord: https://discord.gg/invite
----
-
-Optional longer description here. Use markdown for formatting.
-
-## Features
-
-- Feature one
-- Feature two
-- Feature three
+  - 5678
 ```
 
-**Available fields:**
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Project name |
-| `description` | Yes | Short description (1-2 sentences) |
-| `url` | Yes | Project URL |
-| `launchDate` | Yes | Launch date (YYYY-MM-DD) |
-| `tags` | Yes | Array of tags |
-| `creators` | Yes | Array of punk IDs who built this |
-| `thumbnail` | No | Path to image (use `/projects/filename.png`) |
-| `twitter` | No | Project's Twitter handle |
-| `github` | No | GitHub repo URL |
-| `discord` | No | Discord invite URL |
-| `hidden` | No | Set to `true` to hide from listings |
-| `ded` | No | Set to `true` if project is dead/discontinued |
-
-### Multiple Creators
-
-Projects can have multiple creators! Just list all the punk IDs:
-
-```yaml
-creators:
-  - 8070  # Matt Hall
-  - 5072  # John Watkinson
-```
-
-The project will appear on both punk profile pages.
-
-### Add a Thumbnail
-
-For best results, add your project thumbnail to `public/projects/`:
-
-```
-public/projects/my-project.png
-```
-
-Then reference it in your frontmatter:
-
-```yaml
-thumbnail: /projects/my-project.png
-```
-
-Recommended size: 1200x630px (OG image dimensions).
+The project will appear on both punk pages.
 
 ---
 
-## Submit Your PR
+## Add a Thumbnail
 
-1. Commit your changes
-2. Push to your fork
-3. Open a pull request to the main repo
-4. A maintainer will review and merge
-
-**That's it.** No forms, no approvals, no gatekeepers. Just git.
-
----
-
-## Become a Maintainer
-
-Want to help review PRs and keep the directory running?
-
-Open an issue on GitHub with the title "Maintainer Request" and include:
-
-- Your punk ID
-- Your Twitter/X handle
-- Why you want to help
-
-Maintainers are punk holders who volunteer to review contributions and keep the spam out. No special privileges, just responsibility.
-
----
-
-## Project Structure
+Drop your image in `public/projects/` and reference it:
 
 ```
-madebypunks/
-├── content/
-│   ├── pages/              # Static pages (like this one)
-│   │   └── add.md
-│   ├── punks/              # Punk profiles
-│   │   ├── 2113.md
-│   │   └── 8070.md
-│   └── projects/           # Project files
-│       ├── punkcam.md
-│       └── cryptopunks-app.md
-├── public/
-│   └── projects/           # Project thumbnails
-├── src/
-│   ├── app/                # Next.js routes
-│   ├── components/         # React components
-│   ├── data/               # Data loading
-│   └── types/              # TypeScript types
-└── README.md
+thumbnail: /projects/your-project.png
 ```
+
+Keep it around 1200x630px for best results.
 
 ---
 
-## Tech Stack
+## The Spirit of This Place
 
-- **Next.js 16** - React framework with App Router
-- **TypeScript** - Type safety
-- **Tailwind CSS v4** - Styling
-- **gray-matter** - YAML frontmatter parsing
-- **react-markdown** - Markdown rendering
+CryptoPunks belong to no one and everyone. This directory is the same.
+
+- **No database** - Everything lives in simple text files
+- **No backend** - Just static files, forkable and remix-friendly
+- **No gatekeepers** - Anyone can contribute, anyone can fork
+- **Community-maintained** - Volunteers who hold punks, nothing more
+
+This is lore that belongs to everyone. Take it and build.
 
 ---
 
 ## Questions?
 
-Open an issue on [GitHub](https://github.com/madebypunks/directory/issues).
-
-Let's build.
+Open an issue on [GitHub](https://github.com/madebypunks/directory/issues) or reach out to one of the maintainers.

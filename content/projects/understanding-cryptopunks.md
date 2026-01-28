@@ -6,7 +6,7 @@ launchDate: 2024-01-01
 tags:
   - Guide
   - Education
-  - Code
+  - Culture
 twitter: jalil_eth
 creators:
   - 6980
