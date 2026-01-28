@@ -10,6 +10,7 @@ export interface Project {
   twitter?: string;
   github?: string;
   discord?: string;
+  ded?: boolean; // Project is dead/discontinued
 }
 
 export interface Punk {

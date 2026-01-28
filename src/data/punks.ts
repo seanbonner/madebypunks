@@ -28,6 +28,7 @@ interface ProjectFrontmatter {
   github?: string;
   discord?: string;
   hidden?: boolean;
+  ded?: boolean;
 }
 
 /**
@@ -62,8 +63,8 @@ function loadPunk(punkId: number): Punk | null {
       const { data } = matter(fileContent);
       const projectData = data as ProjectFrontmatter;
 
-      // Skip hidden projects
-      if (projectData.hidden) {
+      // Skip hidden or dead projects
+      if (projectData.hidden || projectData.ded) {
         return null;
       }
 
@@ -82,6 +83,7 @@ function loadPunk(punkId: number): Punk | null {
         twitter: projectData.twitter,
         github: projectData.github,
         discord: projectData.discord,
+        ded: projectData.ded,
       } as Project;
     })
     .filter((project): project is Project => project !== null);
