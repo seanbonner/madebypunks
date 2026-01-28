@@ -1,14 +1,26 @@
 ---
 name: IttyBits
-description: Each Cryptopunk, constrained to 12x12 pixels, while retaining their original ID #s and traits.
+description: Minimalist CryptoPunks rendered at 12x12 pixels, fully on-chain with SHA256 hash-matching IDs.
 url: https://ittybits.xyz/
 launchDate: 2023-01-01
 tags:
   - Art
   - Derivative
+  - On-chain
 twitter: posvar
 creators:
   - 7741
 ---
 
-IttyBits is a collection of all 10,000 CryptoPunks scaled down to just 12x12 pixels. Each tiny punk retains its original ID number and traits, creating a miniature version of the iconic collection.
+IttyBits is a 10k PFP project where each CryptoPunk is rendered at 12×12 pixels while retaining their original ID numbers and traits. Created by Jeremy.eth (posvar), it represents six months of work exploring how small a punk can be made while preserving its individuality.
+
+## Technical Details
+
+- **Fully On-chain** - All image data stored directly on Ethereum
+- **12×12 Pixels** - The minimum size that preserves punk identity
+- **SHA256 Authentication** - Hash-matching IDs verify authenticity
+- **All Traits Included** - Every attribute from the original punks is represented
+
+## Why 12×12?
+
+When doing anything on-chain, minimizing data size is critical. The question was: how small can a punk be made while retaining the individuality of the image? The answer turns out to be 12×12 pixels—any smaller and the traits become indistinguishable.

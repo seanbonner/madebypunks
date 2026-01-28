@@ -1,7 +1,6 @@
 ---
-name: Cryptopunks.eth.limo
-description: A new NFT marketplace dedicated exclusively to the iconic 10,000 CryptoPunks.
-thumbnail: https://cryptopunks.eth.limo/favicon.ico
+name: CryptoPunks.eth.limo
+description: A decentralized NFT marketplace to buy and sell CryptoPunks on Ethereum, hosted via ENS.
 url: https://cryptopunks.eth.limo/
 launchDate: 2023-01-01
 tags:
@@ -11,3 +10,13 @@ tags:
 creators:
   - 3900
 ---
+
+CryptoPunks.eth.limo is a decentralized marketplace built specifically for trading the 10,000 CryptoPunks. Hosted via ENS (Ethereum Name Service), it provides a permissionless alternative to centralized platforms.
+
+## Features
+
+- **Buy & Sell** - List your punks for sale or make offers on punks you want
+- **Bid System** - Place bids on punks with dedicated tracking
+- **Wrapped Punk Support** - Trade both native and wrapped ERC-721 punks
+- **ENS Hosted** - Decentralized frontend via .eth.limo gateway
+- **Real-time Data** - Live pricing and transaction information

@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 import { COLORS } from "./constants";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 interface OGImageOptions {
   width: number;
@@ -321,7 +323,18 @@ export async function generateProjectOGImage(
 
   // If local thumbnail exists, show it prominently
   if (isLocalThumbnail && thumbnail) {
-    const thumbnailUrl = `${siteUrl}${thumbnail}`;
+    // Read local file directly from filesystem during build
+    let thumbnailUrl: string;
+    try {
+      const filePath = join(process.cwd(), "public", thumbnail);
+      const fileBuffer = readFileSync(filePath);
+      const base64 = fileBuffer.toString("base64");
+      const mimeType = thumbnail.endsWith(".png") ? "image/png" : "image/jpeg";
+      thumbnailUrl = `data:${mimeType};base64,${base64}`;
+    } catch {
+      // Fallback to URL if file read fails
+      thumbnailUrl = `${siteUrl}${thumbnail}`;
+    }
 
     return new ImageResponse(
       (

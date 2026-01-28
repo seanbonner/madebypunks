@@ -1,14 +1,27 @@
 ---
 name: Burned Punks
-description: There were 10,000 Cryptopunks. 9,988 remain.
+description: A memorial for the CryptoPunks that have been permanently destroyed. There were 10,000. Now there are fewer.
 url: https://burnedpunks.com
 launchDate: 2023-11-01
 tags:
-  - Community
   - History
+  - Art
+  - Memorial
 twitter: seanbonner
 creators:
   - 4736
 ---
 
-A memorial and tracker for the CryptoPunks that have been burned (sent to null addresses), documenting the punks that are forever lost.
+Burned Punks is an art project and memorial by Sean Bonner that documents the CryptoPunks that have been sent to null addresses, permanently removing them from circulation.
+
+## From Ashes to Ether
+
+When a punk is "burned" (sent to a null address), it's gone forever. This project tracks and memorializes these lost punks, exploring themes of digital permanence, destruction, and value.
+
+## Features
+
+- **The Punks** - Gallery of all burned CryptoPunks
+- **History** - The story behind each burn
+- **FAQ** - Understanding punk burning
+
+Licensed under Creative Commons BY 4.0.

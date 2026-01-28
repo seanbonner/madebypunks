@@ -1,13 +1,31 @@
 ---
 name: Punk Secrets
-description: Find out what your punk is hiding.
-thumbnail: https://pbs.twimg.com/profile_images/1661814409537224713/T1Rl7eyd_400x400.jpg
+description: An interactive 3D experience to discover hidden attributes in CryptoPunks.
 url: https://punksecrets.art/
 launchDate: 2023-01-01
 tags:
-  - Documentary
+  - Interactive
   - Mystery
   - Art
+twitter: CryptoPunksDocs
 creators:
   - 5230
 ---
+
+Punk Secrets is an interactive web application that lets you explore CryptoPunks and discover what they're hiding. Using 3D visualization, the project reveals hidden attributes and characteristics within individual punk avatars.
+
+## Features
+
+- **Random Punk Selection** - Discover punks at random
+- **Filtered Views** - Browse by attribute count (5, 6, or 7 attributes)
+- **Category Browsing** - Explore Aliens, Apes, and Zombies
+- **Hidden Attributes** - Find punks with hidden traits
+- **3D Visualization** - Interactive viewing with Three.js rendering
+
+## Explore By Type
+
+- Punks with 5+ attributes
+- Punks with 6+ attributes
+- Punks with 7 attributes (rarest)
+- Punks with medical masks
+- Punks with hidden attributes
