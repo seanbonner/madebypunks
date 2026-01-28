@@ -1,6 +1,6 @@
 ---
 name: Project Submission
-about: Add your project to Made by Punks
+about: Add your CryptoPunks-related project to the directory
 title: "New Project: [Your Project Name]"
 labels: submission
 assignees: ""
@@ -26,7 +26,7 @@ assignees: ""
 **Website URL:**
 
 **What is it?**
-<!-- A sentence or two describing your project -->
+<!-- A sentence or two describing your CryptoPunks-related project -->
 
 **When did you launch it?**
 <!-- Month/Year is fine, like "June 2024" -->

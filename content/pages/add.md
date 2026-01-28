@@ -4,23 +4,23 @@ title: Add Your Project
 
 # Share Your Work
 
-Made by Punks is a community space for creators. If you hold a CryptoPunk and you've made something—art, music, writing, video, tools, anything—we want to feature it here.
+Made by Punks is a directory of projects that explore CryptoPunks art and culture. If you hold a punk and you've created something inspired by or related to CryptoPunks, we want to feature it here.
 
 ---
 
 ## What Counts as a Project?
 
-Anything you've created. Seriously.
+Anything that explores, celebrates, or builds on CryptoPunks.
 
-- **Art** - Illustrations, animations, remixes, derivatives
-- **Writing** - Books, essays, zines, poetry
-- **Film** - Documentaries, videos, short films
-- **Music** - Albums, singles, soundscapes
-- **Physical goods** - Prints, merch, collectibles
-- **Tools** - Apps, websites, utilities
-- **Community projects** - Events, collabs, initiatives
+- **Art** - Derivatives, remixes, animations, illustrations inspired by punks
+- **Writing** - Books, essays, zines about punk culture and history
+- **Film** - Documentaries, videos about the punk community
+- **Music** - Soundtracks, albums inspired by punk aesthetics
+- **Physical goods** - Prints, merch, collectibles featuring punks
+- **Tools** - Apps, explorers, utilities for the punk community
+- **Community projects** - Events, collabs, initiatives around punks
 
-If you made it and you're a punk holder, it belongs here.
+If it's about punks and you made it, it belongs here.
 
 ---
 

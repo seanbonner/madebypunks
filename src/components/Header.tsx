@@ -13,10 +13,10 @@ export function Header() {
         </Link>
 
         <nav className="flex items-center">
-          <Button href="/add" variant="primary" size="sm" className="hidden sm:inline-flex">
-            + Add Project
+          <Button href="/add" variant="primary" size="sm" className="!hidden sm:!inline-flex">
+            + Share Work
           </Button>
-          <Button href="/add" variant="primary" size="sm" className="sm:hidden w-9 h-9 p-0 justify-center">
+          <Button href="/add" variant="primary" size="sm" className="sm:!hidden w-9 h-9 p-0 justify-center">
             +
           </Button>
         </nav>
