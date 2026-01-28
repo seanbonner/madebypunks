@@ -24,8 +24,8 @@ interface ProjectOGImageProps {
   tags?: string[];
 }
 
-function getPunkImageUrl(punkId: number) {
-  return `https://www.larvalabs.com/cryptopunks/cryptopunk${punkId}.png`;
+function getPunkImageUrl(punkId: number, size: number = 480) {
+  return `https://punks.art/api/punks/${punkId}?format=png&size=${size}&background=v2`;
 }
 
 // Load Silkscreen font from Google Fonts
@@ -225,7 +225,7 @@ export async function generateOGImage(
     );
   }
 
-  // Multiple punks view (homepage)
+  // Multiple punks view (homepage) - centered design with padding
   return new ImageResponse(
     (
       <div
@@ -237,18 +237,21 @@ export async function generateOGImage(
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: COLORS.punkBlue,
+          padding: "60px",
         }}
       >
-        {/* Punk avatars */}
+        {/* Punks row */}
         {punkIds && punkIds.length > 0 && (
           <div
             style={{
               display: "flex",
-              gap: "16px",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "24px",
               marginBottom: "48px",
             }}
           >
-            {punkIds.slice(0, 6).map((id) => (
+            {punkIds.slice(0, 5).map((id) => (
               <div
                 key={id}
                 style={{
@@ -257,8 +260,8 @@ export async function generateOGImage(
               >
                 <img
                   src={getPunkImageUrl(id)}
-                  width={100}
-                  height={100}
+                  width={120}
+                  height={120}
                   style={{
                     imageRendering: "pixelated",
                   }}
@@ -268,42 +271,48 @@ export async function generateOGImage(
           </div>
         )}
 
-        {/* Title */}
+        {/* Title - centered */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            textAlign: "center",
           }}
         >
+          {/* Made by PUNKS */}
           <div
             style={{
               display: "flex",
               fontFamily: "Silkscreen",
-              fontSize: 72,
+              fontSize: 100,
+              fontWeight: 400,
+              color: COLORS.punkPink,
+              textTransform: "uppercase",
+              lineHeight: 1,
+            }}
+          >
+            Made by Punks
+          </div>
+
+          {/* Tagline */}
+          <div
+            style={{
+              display: "flex",
+              fontFamily: "Silkscreen",
+              fontSize: 40,
               fontWeight: 400,
               color: "white",
               textTransform: "uppercase",
+              marginTop: "28px",
+              opacity: 0.7,
+              maxWidth: "1000px",
+              textAlign: "center",
+              justifyContent: "center",
             }}
           >
-            {title}
+            A CryptoPunks Directory
           </div>
-          {subtitle && (
-            <div
-              style={{
-                display: "flex",
-                fontFamily: "Silkscreen",
-                fontSize: 24,
-                fontWeight: 400,
-                color: "white",
-                textTransform: "uppercase",
-                marginTop: "16px",
-                opacity: 0.7,
-              }}
-            >
-              {subtitle}
-            </div>
-          )}
         </div>
       </div>
     ),
