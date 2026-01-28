@@ -14,7 +14,6 @@ interface OGImageProps {
   punkIds?: number[];
   punkId?: number;
   projectCount?: number;
-  twitter?: string;
 }
 
 interface ProjectOGImageProps {
@@ -27,6 +26,14 @@ interface ProjectOGImageProps {
 
 function getPunkImageUrl(punkId: number) {
   return `https://punks.art/api/punks/${punkId}?format=png&size=240&background=v2`;
+}
+
+// Load Silkscreen font from Google Fonts
+async function loadSilkscreenFont(): Promise<ArrayBuffer> {
+  const response = await fetch(
+    "https://fonts.gstatic.com/s/silkscreen/v6/m8JXjfVPf62XiF7kO-i9ULQ.ttf"
+  );
+  return response.arrayBuffer();
 }
 
 export function generateNotFoundImage(options: OGImageOptions): ImageResponse {
@@ -43,7 +50,7 @@ export function generateNotFoundImage(options: OGImageOptions): ImageResponse {
           backgroundColor: COLORS.punkBlue,
           color: "white",
           fontSize: 64,
-          fontWeight: 900,
+          fontWeight: 400,
           textTransform: "uppercase",
         }}
       >
@@ -59,9 +66,12 @@ export async function generateOGImage(
   options: OGImageOptions
 ): Promise<ImageResponse> {
   const { width, height } = options;
-  const { title, subtitle, punkIds, punkId, projectCount, twitter } = props;
+  const { title, subtitle, punkIds, punkId, projectCount } = props;
 
-  // Single punk view - card style with punk on left, info on right
+  // Load Silkscreen font
+  const silkscreenFont = await loadSilkscreenFont();
+
+  // Single punk view - clean, modern design with two-tone blue
   if (punkId !== undefined) {
     return new ImageResponse(
       (
@@ -70,51 +80,50 @@ export async function generateOGImage(
             height: "100%",
             width: "100%",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            backgroundColor: COLORS.punkBlue,
-            padding: "40px",
+            alignItems: "stretch",
+            backgroundColor: COLORS.punkBlueDark,
           }}
         >
-          {/* Punk avatar - large on the left */}
+          {/* Punk avatar area - lighter blue background */}
           <div
             style={{
               display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: COLORS.punkBlue,
+              padding: "60px",
               flexShrink: 0,
-              border: "8px solid #000",
-              boxShadow: "8px 8px 0 0 rgba(0,0,0,0.4)",
-              marginRight: "60px",
             }}
           >
             <img
               src={getPunkImageUrl(punkId)}
-              width={400}
-              height={400}
+              width={360}
+              height={360}
               style={{
                 imageRendering: "pixelated",
               }}
             />
           </div>
 
-          {/* Info on the right */}
+          {/* Info on the right - darker blue background */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               flex: 1,
+              padding: "60px",
             }}
           >
-            {/* Name */}
+            {/* Name - Pixel font */}
             <div
               style={{
                 display: "flex",
-                fontSize: 72,
-                fontWeight: 900,
+                fontFamily: "Silkscreen",
+                fontSize: 64,
+                fontWeight: 400,
                 color: "white",
                 textTransform: "uppercase",
-                letterSpacing: "0.02em",
-                textShadow: "4px 4px 0 #000",
                 lineHeight: 1.1,
               }}
             >
@@ -125,104 +134,89 @@ export async function generateOGImage(
             <div
               style={{
                 display: "flex",
-                fontSize: 36,
-                fontWeight: 700,
+                fontFamily: "Silkscreen",
+                fontSize: 32,
+                fontWeight: 400,
                 color: "white",
                 textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginTop: "16px",
-                opacity: 0.7,
+                marginTop: "12px",
+                opacity: 0.6,
               }}
             >
-              Punk #{punkId}
+              #{punkId}
             </div>
 
-            {/* Stats row */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "32px",
-                marginTop: "32px",
-              }}
-            >
-              {/* Project count badge */}
-              {projectCount !== undefined && (
-                <div
+            {/* Works count - clean, no border */}
+            {projectCount !== undefined && projectCount > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  marginTop: "40px",
+                  gap: "12px",
+                }}
+              >
+                <span
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    backgroundColor: "#fff",
-                    border: "4px solid #000",
-                    padding: "12px 24px",
+                    fontFamily: "Silkscreen",
+                    fontSize: 56,
+                    fontWeight: 400,
+                    color: "white",
+                    lineHeight: 1,
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 48,
-                      fontWeight: 900,
-                      color: COLORS.punkBlue,
-                      marginRight: "12px",
-                    }}
-                  >
-                    {projectCount}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: COLORS.punkBlue,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Work{projectCount !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              )}
-
-              {/* Twitter handle */}
-              {twitter && (
-                <div
+                  {projectCount}
+                </span>
+                <span
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    backgroundColor: COLORS.punkPink,
-                    border: "4px solid #000",
-                    padding: "12px 24px",
+                    fontFamily: "Silkscreen",
+                    fontSize: 28,
+                    fontWeight: 400,
+                    color: "white",
+                    textTransform: "uppercase",
+                    opacity: 0.7,
+                    lineHeight: 1,
+                    paddingBottom: "4px",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 700,
-                      color: "#fff",
-                    }}
-                  >
-                    @{twitter}
-                  </span>
-                </div>
-              )}
-            </div>
+                  work{projectCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
 
             {/* Made by Punks branding */}
             <div
               style={{
                 display: "flex",
-                fontSize: 24,
-                fontWeight: 700,
+                fontFamily: "Silkscreen",
+                fontSize: 20,
+                fontWeight: 400,
                 color: "white",
                 textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                marginTop: "40px",
-                opacity: 0.5,
+                marginTop: "auto",
+                paddingTop: "40px",
+                opacity: 0.4,
               }}
             >
-              Made by Punks
+              madebypunks.co
             </div>
           </div>
         </div>
       ),
-      { width, height }
+      {
+        width,
+        height,
+        fonts: [
+          {
+            name: "Silkscreen",
+            data: silkscreenFont,
+            style: "normal",
+            weight: 400,
+          },
+        ],
+      }
     );
   }
 
@@ -245,7 +239,7 @@ export async function generateOGImage(
           <div
             style={{
               display: "flex",
-              gap: "24px",
+              gap: "16px",
               marginBottom: "48px",
             }}
           >
@@ -254,8 +248,6 @@ export async function generateOGImage(
                 key={id}
                 style={{
                   display: "flex",
-                  border: "6px solid #000",
-                  boxShadow: "6px 6px 0 0 rgba(0,0,0,0.4)",
                 }}
               >
                 <img
@@ -282,12 +274,11 @@ export async function generateOGImage(
           <div
             style={{
               display: "flex",
-              fontSize: 80,
-              fontWeight: 900,
+              fontFamily: "Silkscreen",
+              fontSize: 72,
+              fontWeight: 400,
               color: "white",
               textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              textShadow: "6px 6px 0 #000",
             }}
           >
             {title}
@@ -296,13 +287,13 @@ export async function generateOGImage(
             <div
               style={{
                 display: "flex",
-                fontSize: 28,
-                fontWeight: 700,
+                fontFamily: "Silkscreen",
+                fontSize: 24,
+                fontWeight: 400,
                 color: "white",
                 textTransform: "uppercase",
-                letterSpacing: "0.1em",
                 marginTop: "16px",
-                opacity: 0.8,
+                opacity: 0.7,
               }}
             >
               {subtitle}
@@ -311,7 +302,18 @@ export async function generateOGImage(
         </div>
       </div>
     ),
-    { width, height }
+    {
+      width,
+      height,
+      fonts: [
+        {
+          name: "Silkscreen",
+          data: silkscreenFont,
+          style: "normal",
+          weight: 400,
+        },
+      ],
+    }
   );
 }
 
@@ -322,6 +324,9 @@ export async function generateProjectOGImage(
 ): Promise<ImageResponse> {
   const { width, height } = options;
   const { name, description, thumbnail, punkId, tags } = props;
+
+  // Load Silkscreen font
+  const silkscreenFont = await loadSilkscreenFont();
 
   // Only use local thumbnails (starting with /) to avoid external image loading issues
   // Skip GIFs as they're not supported by next/og ImageResponse
@@ -351,17 +356,18 @@ export async function generateProjectOGImage(
             height: "100%",
             width: "100%",
             display: "flex",
-            backgroundColor: COLORS.punkBlue,
+            backgroundColor: COLORS.punkBlueDark,
           }}
         >
-          {/* Thumbnail - left side */}
+          {/* Thumbnail - left side, lighter blue */}
           <div
             style={{
-              width: "60%",
+              width: "55%",
               height: "100%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              backgroundColor: COLORS.punkBlue,
               padding: "40px",
             }}
           >
@@ -371,34 +377,31 @@ export async function generateProjectOGImage(
                 maxWidth: "100%",
                 maxHeight: "100%",
                 objectFit: "contain",
-                border: "8px solid #000",
-                boxShadow: "8px 8px 0 0 rgba(0,0,0,0.4)",
               }}
             />
           </div>
 
-          {/* Info - right side */}
+          {/* Info - right side, darker blue */}
           <div
             style={{
-              width: "40%",
+              width: "45%",
               height: "100%",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-              padding: "40px 40px 40px 0",
+              padding: "40px",
             }}
           >
             {/* Project name */}
             <div
               style={{
                 display: "flex",
-                fontSize: 48,
-                fontWeight: 900,
+                fontFamily: "Silkscreen",
+                fontSize: 40,
+                fontWeight: 400,
                 color: "white",
                 textTransform: "uppercase",
-                letterSpacing: "0.02em",
-                textShadow: "4px 4px 0 #000",
-                lineHeight: 1.1,
+                lineHeight: 1.2,
               }}
             >
               {name}
@@ -408,15 +411,17 @@ export async function generateProjectOGImage(
             <div
               style={{
                 display: "flex",
-                fontSize: 24,
-                fontWeight: 500,
+                fontSize: 22,
+                fontWeight: 400,
                 color: "white",
                 marginTop: "16px",
                 opacity: 0.8,
-                lineHeight: 1.4,
+                lineHeight: 1.5,
               }}
             >
-              {description}
+              {description.length > 120
+                ? description.slice(0, 120) + "..."
+                : description}
             </div>
 
             {/* Tags */}
@@ -429,17 +434,17 @@ export async function generateProjectOGImage(
                   marginTop: "24px",
                 }}
               >
-                {tags.slice(0, 3).map((tag, i) => (
+                {tags.slice(0, 3).map((tag) => (
                   <div
                     key={tag}
                     style={{
                       display: "flex",
-                      backgroundColor: i % 2 === 0 ? "#fff" : COLORS.punkPink,
-                      color: i % 2 === 0 ? COLORS.punkBlue : "#fff",
-                      border: "3px solid #000",
+                      fontFamily: "Silkscreen",
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      color: "#fff",
                       padding: "6px 12px",
                       fontSize: 14,
-                      fontWeight: 700,
+                      fontWeight: 400,
                       textTransform: "uppercase",
                     }}
                   >
@@ -455,19 +460,18 @@ export async function generateProjectOGImage(
                 display: "flex",
                 alignItems: "center",
                 marginTop: "32px",
-                gap: "16px",
+                gap: "12px",
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  border: "4px solid #000",
                 }}
               >
                 <img
                   src={getPunkImageUrl(punkId)}
-                  width={60}
-                  height={60}
+                  width={48}
+                  height={48}
                   style={{
                     imageRendering: "pixelated",
                   }}
@@ -476,25 +480,36 @@ export async function generateProjectOGImage(
               <div
                 style={{
                   display: "flex",
-                  fontSize: 18,
-                  fontWeight: 700,
+                  fontFamily: "Silkscreen",
+                  fontSize: 16,
+                  fontWeight: 400,
                   color: "white",
                   textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  opacity: 0.6,
+                  opacity: 0.5,
                 }}
               >
-                Made by Punks
+                madebypunks.co
               </div>
             </div>
           </div>
         </div>
       ),
-      { width, height }
+      {
+        width,
+        height,
+        fonts: [
+          {
+            name: "Silkscreen",
+            data: silkscreenFont,
+            style: "normal",
+            weight: 400,
+          },
+        ],
+      }
     );
   }
 
-  // Fallback: text-only with punk avatar
+  // Fallback: text-only with punk avatar - two-tone design
   return new ImageResponse(
     (
       <div
@@ -502,52 +517,51 @@ export async function generateProjectOGImage(
           height: "100%",
           width: "100%",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: COLORS.punkBlue,
-          padding: "60px",
+          alignItems: "stretch",
+          backgroundColor: COLORS.punkBlueDark,
         }}
       >
-        {/* Punk avatar */}
+        {/* Punk avatar area - lighter blue */}
         <div
           style={{
             display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: COLORS.punkBlue,
+            padding: "60px",
             flexShrink: 0,
-            border: "8px solid #000",
-            boxShadow: "8px 8px 0 0 rgba(0,0,0,0.4)",
-            marginRight: "60px",
           }}
         >
           <img
             src={getPunkImageUrl(punkId)}
-            width={300}
-            height={300}
+            width={280}
+            height={280}
             style={{
               imageRendering: "pixelated",
             }}
           />
         </div>
 
-        {/* Info */}
+        {/* Info - darker blue */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
             flex: 1,
+            padding: "60px",
           }}
         >
           {/* Project name */}
           <div
             style={{
               display: "flex",
-              fontSize: 64,
-              fontWeight: 900,
+              fontFamily: "Silkscreen",
+              fontSize: 52,
+              fontWeight: 400,
               color: "white",
               textTransform: "uppercase",
-              letterSpacing: "0.02em",
-              textShadow: "4px 4px 0 #000",
-              lineHeight: 1.1,
+              lineHeight: 1.2,
             }}
           >
             {name}
@@ -557,16 +571,18 @@ export async function generateProjectOGImage(
           <div
             style={{
               display: "flex",
-              fontSize: 28,
-              fontWeight: 500,
+              fontSize: 26,
+              fontWeight: 400,
               color: "white",
               marginTop: "20px",
               opacity: 0.8,
-              lineHeight: 1.4,
-              maxWidth: "600px",
+              lineHeight: 1.5,
+              maxWidth: "550px",
             }}
           >
-            {description}
+            {description.length > 150
+              ? description.slice(0, 150) + "..."
+              : description}
           </div>
 
           {/* Tags */}
@@ -575,21 +591,21 @@ export async function generateProjectOGImage(
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: "12px",
-                marginTop: "32px",
+                gap: "10px",
+                marginTop: "28px",
               }}
             >
-              {tags.slice(0, 4).map((tag, i) => (
+              {tags.slice(0, 4).map((tag) => (
                 <div
                   key={tag}
                   style={{
                     display: "flex",
-                    backgroundColor: i % 2 === 0 ? "#fff" : COLORS.punkPink,
-                    color: i % 2 === 0 ? COLORS.punkBlue : "#fff",
-                    border: "4px solid #000",
-                    padding: "8px 16px",
-                    fontSize: 18,
-                    fontWeight: 700,
+                    fontFamily: "Silkscreen",
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                    color: "#fff",
+                    padding: "8px 14px",
+                    fontSize: 16,
+                    fontWeight: 400,
                     textTransform: "uppercase",
                   }}
                 >
@@ -603,20 +619,31 @@ export async function generateProjectOGImage(
           <div
             style={{
               display: "flex",
-              fontSize: 20,
-              fontWeight: 700,
+              fontFamily: "Silkscreen",
+              fontSize: 18,
+              fontWeight: 400,
               color: "white",
               textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              marginTop: "40px",
-              opacity: 0.5,
+              marginTop: "36px",
+              opacity: 0.4,
             }}
           >
-            Made by Punks
+            madebypunks.co
           </div>
         </div>
       </div>
     ),
-    { width, height }
+    {
+      width,
+      height,
+      fonts: [
+        {
+          name: "Silkscreen",
+          data: silkscreenFont,
+          style: "normal",
+          weight: 400,
+        },
+      ],
+    }
   );
 }
