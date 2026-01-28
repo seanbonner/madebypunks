@@ -180,8 +180,13 @@ export function getAllPunkParams() {
 
 /**
  * Group projects by their creator sets.
- * Projects with the same creators are grouped together.
- * Returns groups sorted by most projects first.
+ *
+ * Logic:
+ * - If a punk has at least one SOLO project (they're the only creator),
+ *   they get their own entry with ALL their projects (solo + collab)
+ * - Punks who ONLY have collaborative projects are grouped together
+ *
+ * Returns groups sorted by featured first, then by most projects.
  */
 export interface CreatorGroup {
   key: string;
@@ -190,10 +195,34 @@ export interface CreatorGroup {
 }
 
 export function getProjectGroups(): CreatorGroup[] {
-  const groups = new Map<string, { punkIds: number[]; projects: Project[] }>();
-
+  // Step 1: Identify punks who have at least one solo project
+  const punksWithSoloProjects = new Set<number>();
   for (const project of PROJECTS) {
-    // Create a unique key from sorted creator IDs
+    if (project.creators.length === 1) {
+      punksWithSoloProjects.add(project.creators[0]);
+    }
+  }
+
+  // Step 2: Build groups
+  const groups = new Map<string, { punkIds: number[]; projects: Project[] }>();
+  const processedProjects = new Set<string>();
+
+  // First, create individual entries for punks with solo projects
+  for (const punkId of punksWithSoloProjects) {
+    const punkProjects = PROJECTS.filter((p) => p.creators.includes(punkId));
+    const key = String(punkId);
+
+    groups.set(key, { punkIds: [punkId], projects: punkProjects });
+
+    // Mark these projects as processed
+    punkProjects.forEach((p) => processedProjects.add(p.id));
+  }
+
+  // Then, group remaining projects (where NO creator has solo projects)
+  for (const project of PROJECTS) {
+    if (processedProjects.has(project.id)) continue;
+
+    // All creators of this project have no solo projects, group them together
     const sortedIds = [...project.creators].sort((a, b) => a - b);
     const key = sortedIds.join("-");
 

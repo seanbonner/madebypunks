@@ -46,7 +46,7 @@ export function ProjectThumbnail({
       src={imageSrc}
       alt={projectName}
       fill
-      className="pixelated object-cover"
+      className="pixelated object-contain"
       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
       unoptimized
       fallbackText={projectName}

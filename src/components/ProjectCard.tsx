@@ -39,22 +39,14 @@ export function ProjectCard({
 
       {/* Content */}
       <div className="flex flex-1 flex-col p-3">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <h3 className="text-lg font-bold uppercase tracking-wide leading-tight">
-            <Link
-              href={`/p/${project.id}`}
-              className="hover:text-punk-pink transition-colors"
-            >
-              {project.name}
-            </Link>
-          </h3>
-          <time
-            dateTime={project.launchDate}
-            className="shrink-0 text-base font-medium opacity-60 font-mono mt-1"
+        <h3 className="mb-2 text-lg font-bold uppercase tracking-wide leading-tight">
+          <Link
+            href={`/p/${project.id}`}
+            className="hover:text-punk-pink transition-colors"
           >
-            {formattedDate}
-          </time>
-        </div>
+            {project.name}
+          </Link>
+        </h3>
 
         {/* Collaborators */}
         {collaborators && collaborators.length > 0 && (
@@ -96,7 +88,7 @@ export function ProjectCard({
           )}
         </div>
 
-        {/* Social Links */}
+        {/* Social Links + Date */}
         <div className="flex items-center gap-3 pt-2 mt-auto">
           {showPunk && project.creators[0] && (
             <Link
@@ -139,6 +131,12 @@ export function ProjectCard({
               <DiscordIcon className="h-4 w-4" />
             </a>
           )}
+          <time
+            dateTime={project.launchDate}
+            className="ml-auto text-sm font-medium opacity-50 font-mono"
+          >
+            {formattedDate}
+          </time>
         </div>
       </div>
     </article>

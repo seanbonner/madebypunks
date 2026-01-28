@@ -39,7 +39,7 @@ export function PunkBadge({
             </span>
           </div>
           {showTwitter && punk.twitter && (
-            <div className="text-sm font-medium opacity-60">
+            <div className={`${config.text} font-medium opacity-60`}>
               @{punk.twitter}
             </div>
           )}
