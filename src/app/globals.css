@@ -73,6 +73,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Clickable elements */
+a,
+button,
+[role="button"],
+input[type="submit"],
+input[type="button"],
+select,
+label[for] {
+  cursor: pointer;
+}
+
 /* Focus styles */
 :focus-visible {
   outline: 4px solid var(--punk-blue);

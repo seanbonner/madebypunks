@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Markdown from "react-markdown";
-import { Header, Footer, PunkAvatar, ProjectThumbnail, Button, LinksList } from "@/components";
+import { Header, Footer, PunkAvatar, ProjectThumbnail, Button, LinksList, BackButton } from "@/components";
 import { getProjectById, getAllProjects, getProjectCreators } from "@/data/punks";
 
 interface ProjectPageProps {
@@ -70,12 +70,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         {/* Project Header */}
         <section className="bg-punk-blue">
           <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <Link
-              href="/"
-              className="mb-6 inline-flex items-center gap-2 text-base font-bold uppercase tracking-wider text-white/80 transition-colors hover:text-white"
-            >
-              ← Back
-            </Link>
+            <BackButton className="mb-6" />
 
             <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
               {/* Thumbnail */}
@@ -114,21 +109,26 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                 </div>
 
                 {/* Meta */}
-                <div className="mt-8 flex flex-wrap items-center gap-6 text-base text-white/60 font-mono">
-                  <span>Launched {formattedDate}</span>
-                  <div className="flex items-center gap-4">
-                    <span>by</span>
-                    {creators.map((creator) => (
-                      <Link
-                        key={creator.id}
-                        href={`/${creator.id}`}
-                        className="flex items-center gap-1 hover:text-white transition-colors"
-                      >
-                        <PunkAvatar punkId={creator.id} size={24} className="border-0!" />
-                        <span>{creator.name || `#${creator.id}`}</span>
-                      </Link>
-                    ))}
-                  </div>
+                <div className="mt-8 space-y-3 text-base font-mono">
+                  <span className="text-white/60">Launched {formattedDate}</span>
+
+                  {creators.length > 0 && (
+                    <div className="mt-4">
+                      <span className="block mb-2 text-white/40">Creators:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {creators.map((creator) => (
+                          <Link
+                            key={creator.id}
+                            href={`/${creator.id}`}
+                            className="flex items-center gap-1.5 whitespace-nowrap bg-white/10 px-2 py-1 hover:bg-white/20 transition-colors"
+                          >
+                            <PunkAvatar punkId={creator.id} size={20} className="border-0!" />
+                            <span className="text-white/80">{creator.name || `#${creator.id}`}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

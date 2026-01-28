@@ -1,8 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import Markdown from "react-markdown";
-import { Header, Footer, PunkAvatar, ProjectListItem, LinksList } from "@/components";
+import { Header, Footer, PunkAvatar, ProjectListItem, LinksList, BackButton } from "@/components";
 import { getPunkById, getAllPunks, getProjectsByPunk, getProjectCreators } from "@/data/punks";
 
 interface PunkPageProps {
@@ -66,12 +65,7 @@ export default async function PunkPage({ params }: PunkPageProps) {
         {/* Punk Header */}
         <section className="bg-punk-blue">
           <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <Link
-              href="/"
-              className="mb-6 inline-flex items-center gap-2 text-base font-bold uppercase tracking-wider text-white/80 transition-colors hover:text-white"
-            >
-              ← Back
-            </Link>
+            <BackButton className="mb-6" />
 
             <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
               <PunkAvatar
