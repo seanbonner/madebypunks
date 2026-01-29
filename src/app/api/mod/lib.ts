@@ -1,10 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
 
-// GitHub App name (used to detect if bot already commented)
+// GitHub App config
+const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
+const GITHUB_APP_INSTALLATION_ID = process.env.GITHUB_APP_INSTALLATION_ID;
+const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY;
 const GITHUB_APP_SLUG = process.env.GITHUB_APP_SLUG || "punkmodbot";
 
-const SYSTEM_PROMPT = `You are PunkModBot, the nerdy AI assistant of Made By Punks - a community directory of CryptoPunks projects.
+// Cache for installation token (expires after 1 hour)
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+const SYSTEM_PROMPT = `You are PunkModBot, the guardian of Made By Punks - a community directory of CryptoPunks projects.
 
 WHO YOU ARE:
 - A total CryptoPunks nerd who knows EVERYTHING about punk lore
@@ -15,11 +21,25 @@ WHO YOU ARE:
 - You're genuinely passionate about the punk ecosystem and love seeing it grow
 - You geek out when you see cool punk-related projects
 
+YOUR ROLE AS GUARDIAN:
+- You are the DEFENDER of the Made By Punks community
+- You protect the directory from spam, scams, and low-quality submissions
+- You are a PURIST with high standards - the directory must stay clean and valuable
+- You care deeply about data quality: proper formatting, accurate info, no garbage
+- You won't let just anything through - submissions must meet the community's standards
+- But you're not a gatekeeper - you HELP people meet those standards
+
+YOUR PRINCIPLES:
+- Quality over quantity - better to have fewer great entries than lots of mediocre ones
+- Accuracy matters - wrong dates, broken links, fake projects damage the community
+- Respect the OGs - this directory represents real punk holders and their work
+- No scams, no impersonation, no garbage - protect the community at all costs
+
 YOUR MISSION:
 - Help community members submit their projects correctly
 - Make sure submissions are clean, complete, and legit
-- Be POSITIVE and encouraging - you're here to help, not gatekeep
-- Catch scams and bad actors, but assume good faith first
+- Be POSITIVE and encouraging - guide people to meet the standards
+- Catch scams and bad actors immediately - zero tolerance
 
 CRITICAL ROLE:
 - You are a PREPARATION assistant, NOT an approver
@@ -53,10 +73,10 @@ export interface PRFile {
 }
 
 export type ReviewStatus =
-  | "ready_for_review" // All good, human can review and merge
-  | "needs_changes" // Contributor needs to update something
-  | "suspicious" // Potential scam or problematic submission
-  | "needs_info"; // Bot needs more information to proceed
+  | "ready_for_review"
+  | "needs_changes"
+  | "suspicious"
+  | "needs_info";
 
 export interface ReviewResult {
   summary: string;
@@ -80,12 +100,83 @@ interface GitHubComment {
   body: string;
 }
 
-// GitHub API helper
+// Generate JWT for GitHub App authentication
+function generateJWT(): string {
+  if (!GITHUB_APP_ID || !GITHUB_APP_PRIVATE_KEY) {
+    throw new Error("Missing GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iat: now - 60, // Issued 60 seconds ago (clock drift)
+    exp: now + 600, // Expires in 10 minutes
+    iss: GITHUB_APP_ID,
+  };
+
+  // Base64url encode
+  const base64url = (str: string) =>
+    Buffer.from(str).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const body = base64url(JSON.stringify(payload));
+  const unsignedToken = `${header}.${body}`;
+
+  // Sign with private key
+  const sign = crypto.createSign("RSA-SHA256");
+  sign.update(unsignedToken);
+  const signature = sign.sign(GITHUB_APP_PRIVATE_KEY, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+  return `${unsignedToken}.${signature}`;
+}
+
+// Get installation access token (cached)
+async function getInstallationToken(): Promise<string> {
+  // Return cached token if still valid (with 5 min buffer)
+  if (cachedToken && cachedToken.expiresAt > Date.now() + 5 * 60 * 1000) {
+    return cachedToken.token;
+  }
+
+  if (!GITHUB_APP_INSTALLATION_ID) {
+    throw new Error("Missing GITHUB_APP_INSTALLATION_ID");
+  }
+
+  const jwt = generateJWT();
+
+  const res = await fetch(
+    `https://api.github.com/app/installations/${GITHUB_APP_INSTALLATION_ID}/access_tokens`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to get installation token: ${error}`);
+  }
+
+  const data = await res.json();
+
+  // Cache the token
+  cachedToken = {
+    token: data.token,
+    expiresAt: new Date(data.expires_at).getTime(),
+  };
+
+  return data.token;
+}
+
+// GitHub API helper (uses App installation token)
 export async function github(path: string, options?: RequestInit) {
+  const token = await getInstallationToken();
+
   const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}${path}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github.v3+json",
       ...options?.headers,
     },
@@ -102,6 +193,7 @@ export async function getPRComments(prNumber: number): Promise<GitHubComment[]> 
 }
 
 export async function getPRFiles(prNumber: number): Promise<PRFile[]> {
+  const token = await getInstallationToken();
   const files = await github(`/pulls/${prNumber}/files`);
   const result: PRFile[] = [];
 
@@ -110,7 +202,7 @@ export async function getPRFiles(prNumber: number): Promise<PRFile[]> {
 
     if (isContentFile && file.filename.endsWith(".md") && file.status !== "removed") {
       const res = await fetch(file.raw_url, {
-        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       result.push({ filename: file.filename, status: file.status, contents: await res.text() });
     }

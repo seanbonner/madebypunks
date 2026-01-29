@@ -3,10 +3,12 @@ import { getOpenPRs, reviewPR } from "./lib";
 
 // GET /api/mod - Review all open PRs that haven't been reviewed yet
 export async function GET() {
-  const githubToken = process.env.GITHUB_TOKEN;
+  const appId = process.env.GITHUB_APP_ID;
+  const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
+  const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-  if (!githubToken || !anthropicKey) {
+  if (!appId || !installationId || !privateKey || !anthropicKey) {
     return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
   }
 
