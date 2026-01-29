@@ -55,8 +55,6 @@ That's it. No gatekeepers, no approvals process. Just git.
 
 ## Meet PunkMod
 
-![PunkMod](https://punks.art/api/traits/003-055-020-052?background=v2&format=png)
-
 When you submit a pull request, **PunkMod** will greet you. PunkMod is our AI assistant that helps contributors get their submissions right.
 
 PunkMod will:

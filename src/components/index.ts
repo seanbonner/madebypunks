@@ -9,5 +9,6 @@ export { ProjectThumbnail } from "./ProjectThumbnail";
 export { Button } from "./Button";
 export { LinksList } from "./LinksList";
 export { AIAssistButtons } from "./AIAssistButtons";
+export { PunkMod } from "./PunkMod";
 export { BackButton } from "./BackButton";
 export { SearchOverlay } from "./SearchOverlay";
