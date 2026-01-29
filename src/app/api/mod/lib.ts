@@ -392,20 +392,29 @@ export function formatComment(result: ReviewResult): string {
   return lines.join("\n");
 }
 
-// Check if the bot has already commented on this PR
-function hasAlreadyReviewed(comments: GitHubComment[]): boolean {
+// Check if the bot should skip reviewing this PR
+// Skip only if the bot was the last commenter (waiting for user response)
+// If user commented after bot, bot should respond
+function shouldSkipReview(comments: GitHubComment[]): boolean {
   const botLogin = `${GITHUB_APP_SLUG}[bot]`;
-  console.log("Looking for bot:", botLogin);
-  console.log("Comment authors:", comments.map((c) => c.user.login));
-  return comments.some((c) => c.user.login === botLogin);
+
+  if (comments.length === 0) {
+    return false; // No comments, should review
+  }
+
+  // Find the last comment
+  const lastComment = comments[comments.length - 1];
+
+  // Skip only if the bot was the last commenter
+  return lastComment.user.login === botLogin;
 }
 
 // Review a single PR
 export async function reviewPR(prNumber: number, forceReview = false): Promise<{ reviewed: boolean; reason?: string }> {
   const comments = await getPRComments(prNumber);
 
-  if (!forceReview && hasAlreadyReviewed(comments)) {
-    return { reviewed: false, reason: "already_reviewed" };
+  if (!forceReview && shouldSkipReview(comments)) {
+    return { reviewed: false, reason: "waiting_for_user" };
   }
 
   const [details, files] = await Promise.all([getPRDetails(prNumber), getPRFiles(prNumber)]);
