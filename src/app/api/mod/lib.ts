@@ -120,6 +120,8 @@ function generateJWT(): string {
   }
 
   const privateKey = getPrivateKey();
+  console.log("Private key starts with:", privateKey.substring(0, 40));
+  console.log("Private key ends with:", privateKey.substring(privateKey.length - 40));
 
   const now = Math.floor(Date.now() / 1000);
   const payload = {
@@ -156,6 +158,19 @@ async function getInstallationToken(): Promise<string> {
   }
 
   const jwt = generateJWT();
+  console.log("Generated JWT (first 50 chars):", jwt.substring(0, 50));
+  console.log("App ID:", GITHUB_APP_ID);
+  console.log("Installation ID:", GITHUB_APP_INSTALLATION_ID);
+
+  // First, verify the JWT by calling /app endpoint
+  const appRes = await fetch("https://api.github.com/app", {
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+  const appData = await appRes.text();
+  console.log("GET /app response:", appRes.status, appData.substring(0, 200));
 
   const res = await fetch(
     `https://api.github.com/app/installations/${GITHUB_APP_INSTALLATION_ID}/access_tokens`,
