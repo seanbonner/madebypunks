@@ -135,6 +135,10 @@ export interface DiscussionResponse {
   createPR?: {
     title: string;
     files: { filename: string; content: string }[];
+    // Image to fetch and add (URL from discussion or OG image to extract)
+    imageUrl?: string;
+    // Project slug (needed to name the image file correctly)
+    projectSlug?: string;
   };
 }
 
@@ -678,7 +682,9 @@ export async function createPRFromDiscussion(
   discussionUrl: string,
   files: { filename: string; content: string }[],
   prTitle: string,
-  requestedBy: string
+  requestedBy: string,
+  imageUrl?: string,
+  projectSlug?: string
 ): Promise<CreatePRFromDiscussionResult> {
   if (files.length === 0) {
     return { success: false, error: "No files to create" };
@@ -687,9 +693,29 @@ export async function createPRFromDiscussion(
   try {
     // Check if there's already a PR for this discussion
     const existingPR = await findBotPRForDiscussion(discussionNumber);
+    let thumbnailPath: string | undefined;
 
     if (existingPR) {
       // Update the existing PR
+      // First, handle the image if provided
+      if (imageUrl && projectSlug) {
+        const imageResult = await addImageToPR(existingPR.branchName, imageUrl, projectSlug);
+        if (imageResult.success && imageResult.thumbnailPath) {
+          thumbnailPath = imageResult.thumbnailPath;
+          // Update the file content to include the thumbnail
+          files = files.map(f => {
+            if (f.filename.includes(projectSlug) && !f.content.includes("thumbnail:")) {
+              // Add thumbnail field after the frontmatter opening
+              return {
+                ...f,
+                content: f.content.replace(/^---\n/, `---\nthumbnail: ${thumbnailPath}\n`)
+              };
+            }
+            return f;
+          });
+        }
+      }
+
       for (const file of files) {
         await createFileOnBranch(
           existingPR.branchName,
@@ -712,6 +738,25 @@ export async function createPRFromDiscussion(
 
     await createBranch(branchName);
 
+    // Handle the image first if provided
+    if (imageUrl && projectSlug) {
+      const imageResult = await addImageToPR(branchName, imageUrl, projectSlug);
+      if (imageResult.success && imageResult.thumbnailPath) {
+        thumbnailPath = imageResult.thumbnailPath;
+        // Update the file content to include the thumbnail
+        files = files.map(f => {
+          if (f.filename.includes(projectSlug) && !f.content.includes("thumbnail:")) {
+            // Add thumbnail field after the frontmatter opening
+            return {
+              ...f,
+              content: f.content.replace(/^---\n/, `---\nthumbnail: ${thumbnailPath}\n`)
+            };
+          }
+          return f;
+        });
+      }
+    }
+
     // Create all files on the branch
     for (const file of files) {
       await createFileOnBranch(
@@ -728,6 +773,7 @@ export async function createPRFromDiscussion(
 This PR was created by PunkModBot based on a request in [Discussion #${discussionNumber}](${discussionUrl}).
 
 **Requested by:** @${requestedBy}
+${thumbnailPath ? `\n**Thumbnail:** Added \`${thumbnailPath}\`` : ""}
 
 ---
 
@@ -740,6 +786,197 @@ This PR was created by PunkModBot based on a request in [Discussion #${discussio
     console.error("Error creating PR from discussion:", error);
     return { success: false, error: String(error) };
   }
+}
+
+// =============================================================================
+// IMAGE HANDLING FUNCTIONS
+// =============================================================================
+
+// Extract OG image URL from a website
+export async function extractOGImage(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    // Use Jina Reader to get the page content (it extracts metadata)
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      signal: controller.signal,
+      headers: {
+        Accept: "text/markdown",
+        "X-Return-Format": "markdown",
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+
+    const text = await res.text();
+
+    // Jina sometimes includes OG image in the response
+    // Look for common OG image patterns in the markdown
+    const ogMatch = text.match(/!\[.*?\]\((https?:\/\/[^\s)]+\.(png|jpg|jpeg|gif|webp)[^\s)]*)\)/i);
+    if (ogMatch) return ogMatch[1];
+
+    // Fallback: fetch the actual HTML to extract og:image
+    const htmlRes = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 PunkModBot" },
+    });
+
+    if (!htmlRes.ok) return null;
+
+    const html = await htmlRes.text();
+
+    // Extract og:image from HTML
+    const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+
+    if (ogImageMatch) {
+      let imageUrl = ogImageMatch[1];
+      // Handle relative URLs
+      if (imageUrl.startsWith("/")) {
+        const urlObj = new URL(url);
+        imageUrl = `${urlObj.origin}${imageUrl}`;
+      }
+      return imageUrl;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error extracting OG image:", error);
+    return null;
+  }
+}
+
+// Download an image and return it as base64 (for GitHub API)
+export async function downloadImageAsBase64(imageUrl: string): Promise<{
+  base64: string;
+  mimeType: string;
+  extension: string;
+} | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const res = await fetch(imageUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 PunkModBot" },
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return null;
+
+    const contentType = res.headers.get("content-type") || "image/png";
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+
+    // Determine extension from content type
+    let extension = "png";
+    if (contentType.includes("jpeg") || contentType.includes("jpg")) extension = "jpg";
+    else if (contentType.includes("gif")) extension = "gif";
+    else if (contentType.includes("webp")) extension = "webp";
+    else if (contentType.includes("png")) extension = "png";
+
+    return { base64, mimeType: contentType, extension };
+  } catch (error) {
+    console.error("Error downloading image:", error);
+    return null;
+  }
+}
+
+// Extract image URLs from text (GitHub discussion body/comments may contain uploaded images)
+export function extractImageUrls(text: string): string[] {
+  const urls: string[] = [];
+
+  // GitHub user-uploaded images: ![...](https://user-images.githubusercontent.com/...)
+  // or newer format: ![...](https://github.com/user-attachments/assets/...)
+  const markdownImageRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
+  let match;
+  while ((match = markdownImageRegex.exec(text)) !== null) {
+    urls.push(match[1]);
+  }
+
+  // Direct image URLs
+  const directImageRegex = /(https?:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp)(\?[^\s]*)?)/gi;
+  while ((match = directImageRegex.exec(text)) !== null) {
+    if (!urls.includes(match[1])) {
+      urls.push(match[1]);
+    }
+  }
+
+  return urls;
+}
+
+// Add an image file to a branch
+async function addImageToBranch(
+  branchName: string,
+  imagePath: string,
+  imageBase64: string,
+  commitMessage: string
+): Promise<{ success: boolean; error?: string }> {
+  // SAFETY: Never allow pushing to main
+  if (branchName === "main" || branchName === "master") {
+    throw new Error("SAFETY: Cannot push directly to main/master branch");
+  }
+
+  const token = await getInstallationToken();
+
+  // Check if file already exists
+  const existingSHA = await getFileSHA(REPO_OWNER, REPO_NAME, imagePath, branchName);
+
+  const res = await fetch(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${imagePath}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: commitMessage,
+        content: imageBase64,
+        branch: branchName,
+        ...(existingSHA ? { sha: existingSHA } : {}),
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.text();
+    return { success: false, error };
+  }
+
+  return { success: true };
+}
+
+// Fetch and add an image to a PR (from URL - either uploaded image or OG image)
+export async function addImageToPR(
+  branchName: string,
+  imageUrl: string,
+  projectSlug: string
+): Promise<{ success: boolean; thumbnailPath?: string; error?: string }> {
+  const imageData = await downloadImageAsBase64(imageUrl);
+
+  if (!imageData) {
+    return { success: false, error: "Failed to download image" };
+  }
+
+  const thumbnailPath = `public/projects/${projectSlug}.${imageData.extension}`;
+
+  const result = await addImageToBranch(
+    branchName,
+    thumbnailPath,
+    imageData.base64,
+    `Add thumbnail for ${projectSlug}`
+  );
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  // Return the path to use in the markdown file (without "public")
+  return { success: true, thumbnailPath: `/projects/${projectSlug}.${imageData.extension}` };
 }
 
 export async function getPRFiles(prNumber: number): Promise<PRFile[]> {
@@ -1142,6 +1379,13 @@ IMPORTANT: If someone asks you to add a project or punk entry, and you have enou
 - If info is missing, ask for it politely
 - If you have enough, create the PR immediately
 
+IMAGES:
+- Projects can have a thumbnail image
+- If the user uploads an image in the discussion, I'll automatically use it
+- If no image is uploaded, I'll try to extract the OG image from the project URL
+- You can also specify an imageUrl if the user provides one
+- The projectSlug is required for naming the image file correctly
+
 Respond in JSON:
 {
   "summary": "1 sentence describing what this discussion is about",
@@ -1149,6 +1393,8 @@ Respond in JSON:
   "reply": "Your response to post as a comment. Be helpful and conversational. Mention if you created a PR!",
   "createPR": {
     "title": "Add [project name] to Made By Punks",
+    "projectSlug": "my-project",
+    "imageUrl": "https://example.com/image.png",
     "files": [
       { "filename": "content/projects/my-project.md", "content": "---\\nname: ...\\n---" }
     ]
@@ -1156,6 +1402,8 @@ Respond in JSON:
 }
 
 The "createPR" field is OPTIONAL - only include it when you're actually creating/updating a PR.
+- projectSlug: lowercase with hyphens, used to name files (REQUIRED when creating PR)
+- imageUrl: optional, URL of image to use as thumbnail (if user provided one explicitly)
 If you don't have enough info to create a PR, just reply asking for the missing info.
 
 If the discussion is spam, off-topic garbage, or you genuinely have nothing useful to add:
@@ -1194,12 +1442,43 @@ export async function handleDiscussion(
   if (result.createPR && result.createPR.files.length > 0) {
     const discussionUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/discussions/${discussionNumber}`;
 
+    // Determine image URL - either from Claude's response or try to extract from discussion
+    let imageUrl = result.createPR.imageUrl;
+
+    // If no image specified, look for images in the discussion body and comments
+    if (!imageUrl) {
+      const allText = discussion.body + " " + comments.map(c => c.body).join(" ");
+      const foundImages = extractImageUrls(allText);
+      if (foundImages.length > 0) {
+        imageUrl = foundImages[0]; // Use the first image found
+      }
+    }
+
+    // If still no image, try to extract OG image from project URL in the files
+    if (!imageUrl && result.createPR.projectSlug) {
+      // Find the project file and extract the URL
+      const projectFile = result.createPR.files.find(f =>
+        f.filename.includes(result.createPR!.projectSlug!)
+      );
+      if (projectFile) {
+        const urlMatch = projectFile.content.match(/url:\s*(https?:\/\/[^\s\n]+)/);
+        if (urlMatch) {
+          const ogImage = await extractOGImage(urlMatch[1]);
+          if (ogImage) {
+            imageUrl = ogImage;
+          }
+        }
+      }
+    }
+
     prResult = await createPRFromDiscussion(
       discussionNumber,
       discussionUrl,
       result.createPR.files,
       result.createPR.title,
-      discussion.author.login
+      discussion.author.login,
+      imageUrl,
+      result.createPR.projectSlug
     );
 
     // Append PR info to the reply
