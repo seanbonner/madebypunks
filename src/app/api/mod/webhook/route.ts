@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWebhookSignature, reviewPR, getPRComments } from "../lib";
+import { verifyWebhookSignature, reviewPR, getPRComments, handleDiscussion } from "../lib";
 
 const BOT_LOGIN = `${process.env.GITHUB_APP_SLUG || "punkmodbot"}[bot]`;
 
@@ -24,7 +24,28 @@ interface IssueCommentEvent {
   };
 }
 
-type WebhookEvent = PullRequestEvent | IssueCommentEvent;
+interface DiscussionEvent {
+  action: string;
+  discussion: {
+    number: number;
+    title: string;
+    body: string;
+  };
+}
+
+interface DiscussionCommentEvent {
+  action: string;
+  discussion: {
+    number: number;
+    title: string;
+  };
+  comment: {
+    body: string;
+    user: { login: string };
+  };
+}
+
+type WebhookEvent = PullRequestEvent | IssueCommentEvent | DiscussionEvent | DiscussionCommentEvent;
 
 function isPullRequestEvent(event: WebhookEvent): event is PullRequestEvent {
   return "pull_request" in event;
@@ -32,6 +53,14 @@ function isPullRequestEvent(event: WebhookEvent): event is PullRequestEvent {
 
 function isIssueCommentEvent(event: WebhookEvent): event is IssueCommentEvent {
   return "comment" in event && "issue" in event;
+}
+
+function isDiscussionEvent(event: WebhookEvent): event is DiscussionEvent {
+  return "discussion" in event && !("comment" in event);
+}
+
+function isDiscussionCommentEvent(event: WebhookEvent): event is DiscussionCommentEvent {
+  return "discussion" in event && "comment" in event;
 }
 
 export async function POST(request: NextRequest) {
@@ -108,6 +137,45 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error(`Error re-reviewing PR #${prNumber}:`, error);
       return NextResponse.json({ error: "Failed to re-review PR", pr: prNumber }, { status: 500 });
+    }
+  }
+
+  // Handle discussion events (new discussion created)
+  if (event === "discussion" && isDiscussionEvent(payload)) {
+    if (payload.action !== "created") {
+      return NextResponse.json({ event: "discussion", action: payload.action, skipped: true });
+    }
+
+    const discussionNumber = payload.discussion.number;
+
+    try {
+      const result = await handleDiscussion(discussionNumber);
+      return NextResponse.json({ event: "discussion", action: "created", discussion: discussionNumber, ...result });
+    } catch (error) {
+      console.error(`Error handling discussion #${discussionNumber}:`, error);
+      return NextResponse.json({ error: "Failed to handle discussion", discussion: discussionNumber }, { status: 500 });
+    }
+  }
+
+  // Handle discussion_comment events (someone replied in a discussion)
+  if (event === "discussion_comment" && isDiscussionCommentEvent(payload)) {
+    if (payload.action !== "created") {
+      return NextResponse.json({ event: "discussion_comment", action: payload.action, skipped: true });
+    }
+
+    // Ignore comments from the bot itself (avoid infinite loops)
+    if (payload.comment.user.login === BOT_LOGIN) {
+      return NextResponse.json({ event: "discussion_comment", skipped: true, reason: "bot_comment" });
+    }
+
+    const discussionNumber = payload.discussion.number;
+
+    try {
+      const result = await handleDiscussion(discussionNumber);
+      return NextResponse.json({ event: "discussion_comment", action: "reply", discussion: discussionNumber, ...result });
+    } catch (error) {
+      console.error(`Error replying to discussion #${discussionNumber}:`, error);
+      return NextResponse.json({ error: "Failed to reply to discussion", discussion: discussionNumber }, { status: 500 });
     }
   }
 

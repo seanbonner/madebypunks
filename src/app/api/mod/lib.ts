@@ -111,6 +111,28 @@ export interface PRDetails {
   user: { login: string };
 }
 
+// Discussion types
+export interface DiscussionDetails {
+  id: string; // GraphQL node ID (needed for mutations)
+  number: number;
+  title: string;
+  body: string;
+  author: { login: string };
+  category: { name: string; slug: string };
+}
+
+export interface DiscussionComment {
+  id: string;
+  body: string;
+  author: { login: string };
+}
+
+export interface DiscussionResponse {
+  summary: string;
+  shouldReply: boolean;
+  reply?: string;
+}
+
 interface GitHubComment {
   user: { login: string; type: string };
   body: string;
@@ -408,6 +430,95 @@ export async function getPRComments(prNumber: number): Promise<GitHubComment[]> 
   return github(`/issues/${prNumber}/comments`);
 }
 
+// GraphQL helper for GitHub API (required for Discussions)
+async function githubGraphQL<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const token = await getInstallationToken();
+
+  const res = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const json = await res.json();
+  if (json.errors) {
+    console.error("GraphQL errors:", json.errors);
+    throw new Error(json.errors[0]?.message || "GraphQL error");
+  }
+  return json.data;
+}
+
+// Get discussion details and comments
+export async function getDiscussion(discussionNumber: number): Promise<{
+  discussion: DiscussionDetails;
+  comments: DiscussionComment[];
+}> {
+  const query = `
+    query($owner: String!, $repo: String!, $number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        discussion(number: $number) {
+          id
+          number
+          title
+          body
+          author { login }
+          category { name slug }
+          comments(first: 50) {
+            nodes {
+              id
+              body
+              author { login }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await githubGraphQL<{
+    repository: {
+      discussion: {
+        id: string;
+        number: number;
+        title: string;
+        body: string;
+        author: { login: string };
+        category: { name: string; slug: string };
+        comments: { nodes: Array<{ id: string; body: string; author: { login: string } }> };
+      };
+    };
+  }>(query, { owner: REPO_OWNER, repo: REPO_NAME, number: discussionNumber });
+
+  const d = data.repository.discussion;
+  return {
+    discussion: {
+      id: d.id,
+      number: d.number,
+      title: d.title,
+      body: d.body,
+      author: d.author,
+      category: d.category,
+    },
+    comments: d.comments.nodes,
+  };
+}
+
+// Post a comment on a discussion
+export async function postDiscussionComment(discussionId: string, body: string): Promise<void> {
+  const mutation = `
+    mutation($discussionId: ID!, $body: String!) {
+      addDiscussionComment(input: { discussionId: $discussionId, body: $body }) {
+        comment { id }
+      }
+    }
+  `;
+
+  await githubGraphQL(mutation, { discussionId, body });
+}
+
 export async function getPRFiles(prNumber: number): Promise<PRFile[]> {
   const token = await getInstallationToken();
   const files = await github(`/pulls/${prNumber}/files`);
@@ -701,6 +812,120 @@ export async function reviewPR(prNumber: number, forceReview = false): Promise<{
   await postComment(prNumber, formatComment(result, pushResult));
 
   return { reviewed: true, fixesPushed };
+}
+
+// Discussion-specific system prompt (more conversational than PR review)
+const DISCUSSION_SYSTEM_PROMPT = `${SYSTEM_PROMPT}
+
+YOU ARE NOW IN DISCUSSION MODE - This is a community discussion space, NOT a PR review.
+
+Your role here is different:
+- Be conversational and friendly - this is a chat, not a code review
+- Help people with questions about Made By Punks
+- Answer questions about how to submit projects
+- Discuss CryptoPunks lore and community stuff
+- Be helpful but concise - respect people's time
+- If someone wants to submit a project, guide them to open a PR
+- You can share opinions about punk-related topics
+- Stay on topic - this is about CryptoPunks and the Made By Punks directory
+
+IMPORTANT:
+- Keep responses SHORT (2-3 paragraphs max for most questions)
+- Be genuinely helpful, not robotic
+- If you don't know something, say so
+- Don't be preachy or lecture people`;
+
+// Analyze a discussion and generate a response
+export async function analyzeDiscussion(
+  discussion: DiscussionDetails,
+  comments: DiscussionComment[]
+): Promise<DiscussionResponse> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const botLogin = `${GITHUB_APP_SLUG}[bot]`;
+
+  // Build conversation context
+  const conversationHistory = comments
+    .map((c) => `**@${c.author.login}:** ${c.body}`)
+    .join("\n\n");
+
+  // Check if bot should reply
+  const lastComment = comments[comments.length - 1];
+  const botIsLastCommenter = lastComment && lastComment.author.login === botLogin;
+
+  // If bot was last commenter and no new comments, don't reply again
+  if (botIsLastCommenter) {
+    return { summary: "Bot was last commenter, waiting for user", shouldReply: false };
+  }
+
+  // Check if bot was mentioned or if this is a new discussion with no comments
+  const mentionsBot =
+    discussion.body.toLowerCase().includes("@punkmodbot") ||
+    discussion.body.toLowerCase().includes("punkmod") ||
+    (lastComment && lastComment.body.toLowerCase().includes("@punkmodbot")) ||
+    (lastComment && lastComment.body.toLowerCase().includes("punkmod"));
+
+  const isNewDiscussion = comments.length === 0;
+  const botHasParticipated = comments.some((c) => c.author.login === botLogin);
+
+  // Only reply if: new discussion, bot mentioned, or bot already participating
+  if (!isNewDiscussion && !mentionsBot && !botHasParticipated) {
+    return { summary: "Bot not mentioned and not participating", shouldReply: false };
+  }
+
+  const prompt = `${DISCUSSION_SYSTEM_PROMPT}
+
+## Discussion Details
+- **Title:** ${discussion.title}
+- **Category:** ${discussion.category.name}
+- **Author:** @${discussion.author.login}
+- **Body:**
+${discussion.body}
+
+${conversationHistory ? `## Conversation So Far\n${conversationHistory}` : "## This is a new discussion (no comments yet)"}
+
+## Your Task
+${isNewDiscussion ? "This is a new discussion. Welcome the person and respond to their message." : `Respond to the latest message from @${lastComment.author.login}.`}
+
+Respond in JSON:
+{
+  "summary": "1 sentence describing what this discussion is about",
+  "shouldReply": true,
+  "reply": "Your response to post as a comment. Be helpful and conversational. Use markdown formatting if needed."
+}
+
+If the discussion is spam, off-topic garbage, or you genuinely have nothing useful to add, respond with:
+{
+  "summary": "reason why not replying",
+  "shouldReply": false
+}`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = response.content[0];
+  if (text.type !== "text") throw new Error("Unexpected response");
+  const match = text.text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("No JSON in response");
+  return JSON.parse(match[0]);
+}
+
+// Handle a discussion event (new discussion or new comment)
+export async function handleDiscussion(
+  discussionNumber: number
+): Promise<{ replied: boolean; reason?: string }> {
+  const { discussion, comments } = await getDiscussion(discussionNumber);
+
+  const result = await analyzeDiscussion(discussion, comments);
+
+  if (!result.shouldReply || !result.reply) {
+    return { replied: false, reason: result.summary };
+  }
+
+  await postDiscussionComment(discussion.id, result.reply);
+  return { replied: true };
 }
 
 // Webhook signature verification
