@@ -262,7 +262,12 @@ export async function analyzeWithClaude(prDetails: PRDetails, files: PRFile[]): 
     .map((f) => `### ${f.filename}\n\`\`\`markdown\n${f.contents}\n\`\`\``)
     .join("\n\n");
 
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+
   const prompt = `${SYSTEM_PROMPT}
+
+TODAY'S DATE: ${today}
+Use this to determine if launchDate values are in the past or future. Dates on or before today are valid.
 
 You are reviewing pull requests for Made By Punks, a community directory of CryptoPunks projects.
 
