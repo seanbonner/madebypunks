@@ -4,8 +4,21 @@ import crypto from "crypto";
 // GitHub App config
 const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
 const GITHUB_APP_INSTALLATION_ID = process.env.GITHUB_APP_INSTALLATION_ID;
-const GITHUB_APP_PRIVATE_KEY = process.env.GITHUB_APP_PRIVATE_KEY;
 const GITHUB_APP_SLUG = process.env.GITHUB_APP_SLUG || "punkmodbot";
+
+// Decode private key (supports both base64 and raw PEM format)
+function getPrivateKey(): string {
+  const key = process.env.GITHUB_APP_PRIVATE_KEY;
+  if (!key) throw new Error("Missing GITHUB_APP_PRIVATE_KEY");
+
+  // If it starts with "-----BEGIN", it's already PEM format
+  if (key.startsWith("-----BEGIN")) {
+    return key;
+  }
+
+  // Otherwise, assume it's base64 encoded
+  return Buffer.from(key, "base64").toString("utf-8");
+}
 
 // Cache for installation token (expires after 1 hour)
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -102,9 +115,11 @@ interface GitHubComment {
 
 // Generate JWT for GitHub App authentication
 function generateJWT(): string {
-  if (!GITHUB_APP_ID || !GITHUB_APP_PRIVATE_KEY) {
-    throw new Error("Missing GITHUB_APP_ID or GITHUB_APP_PRIVATE_KEY");
+  if (!GITHUB_APP_ID) {
+    throw new Error("Missing GITHUB_APP_ID");
   }
+
+  const privateKey = getPrivateKey();
 
   const now = Math.floor(Date.now() / 1000);
   const payload = {
@@ -124,7 +139,7 @@ function generateJWT(): string {
   // Sign with private key
   const sign = crypto.createSign("RSA-SHA256");
   sign.update(unsignedToken);
-  const signature = sign.sign(GITHUB_APP_PRIVATE_KEY, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const signature = sign.sign(privateKey, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 
   return `${unsignedToken}.${signature}`;
 }
