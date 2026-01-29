@@ -53,6 +53,24 @@ That's it. No gatekeepers, no approvals process. Just git.
 
 ---
 
+## Meet PunkMod
+
+<img src="https://punks.art/api/traits/003-055-020-052?background=v2&format=png" width="64" alt="PunkMod" style="margin-bottom: 12px;">
+
+When you submit a pull request, **PunkMod** will greet you. PunkMod is our AI assistant that helps contributors get their submissions right.
+
+PunkMod will:
+- **Check your files** for missing or incorrect data
+- **Verify your URLs** to make sure they work
+- **Suggest fixes** if something needs adjusting
+- **Answer questions** - just reply to the bot!
+
+Don't stress about getting everything perfect on your first try. PunkMod is patient and will help you through the process. It's like having a helpful punk friend who knows all the rules.
+
+> PunkMod prepares submissions for review but never merges anything. A human maintainer always makes the final call.
+
+---
+
 ## File Format
 
 ```

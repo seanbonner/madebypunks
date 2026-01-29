@@ -146,7 +146,22 @@ git commit -m "Add Punk #1234 and projects"
 git push origin main
 ```
 
-Then open a pull request. A maintainer will review and merge.
+Then open a pull request.
+
+## PunkMod - Your AI Assistant
+
+<img src="https://punks.art/api/traits/003-055-020-052?background=v2&format=png" width="48" align="left" style="margin-right: 12px;">
+
+When you open a pull request, **PunkMod** will automatically review your submission. PunkMod is an AI bot that:
+
+- **Reviews your files** - Checks if your submission follows the correct format
+- **Fetches your URLs** - Verifies that your project links are working and legit
+- **Suggests fixes** - If something's wrong, PunkMod will tell you exactly what to fix
+- **Has conversations** - You can reply to PunkMod and ask questions
+
+PunkMod is here to help contributors submit quality data and protect the directory from spam and scams. Don't worry if your first submission isn't perfect - PunkMod will guide you through it!
+
+> **Note:** PunkMod never approves or merges PRs. A human maintainer always has the final say.
 
 ## Multiple Creators
 
