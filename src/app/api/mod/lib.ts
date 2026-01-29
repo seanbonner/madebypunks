@@ -254,13 +254,17 @@ export async function postComment(prNumber: number, body: string) {
   });
 }
 
-export async function analyzeWithClaude(prDetails: PRDetails, files: PRFile[]): Promise<ReviewResult> {
+export async function analyzeWithClaude(prDetails: PRDetails, files: PRFile[], comments: GitHubComment[] = []): Promise<ReviewResult> {
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const filesContext = files
     .filter((f) => f.contents)
     .map((f) => `### ${f.filename}\n\`\`\`markdown\n${f.contents}\n\`\`\``)
     .join("\n\n");
+
+  const conversationContext = comments.length > 0
+    ? `\n\n## Conversation History\n${comments.map((c) => `**@${c.user.login}:** ${c.body}`).join("\n\n")}\n\nIMPORTANT: Read the conversation above. If someone asked you a question or provided information, acknowledge it and respond appropriately. Don't repeat your previous review - focus on what's new or what was asked.`
+    : "";
 
   const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
 
@@ -302,7 +306,7 @@ You are reviewing pull requests for Made By Punks, a community directory of Cryp
 - **Description:** ${prDetails.body || "No description provided"}
 
 ## Files Changed
-${filesContext}
+${filesContext}${conversationContext}
 
 ## Your Task
 BE PROACTIVE - fix things yourself whenever possible!
@@ -423,7 +427,7 @@ export async function reviewPR(prNumber: number, forceReview = false): Promise<{
     return { reviewed: false, reason: "no_content_files" };
   }
 
-  const result = await analyzeWithClaude(details, files);
+  const result = await analyzeWithClaude(details, files, comments);
   await postComment(prNumber, formatComment(result));
 
   return { reviewed: true };
