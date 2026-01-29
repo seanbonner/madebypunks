@@ -131,6 +131,11 @@ export interface DiscussionResponse {
   summary: string;
   shouldReply: boolean;
   reply?: string;
+  // PR creation fields (optional - only when bot should create/update a PR)
+  createPR?: {
+    title: string;
+    files: { filename: string; content: string }[];
+  };
 }
 
 interface GitHubComment {
@@ -519,6 +524,224 @@ export async function postDiscussionComment(discussionId: string, body: string):
   await githubGraphQL(mutation, { discussionId, body });
 }
 
+// =============================================================================
+// PR CREATION FUNCTIONS (for bot-initiated PRs from discussions)
+// SAFETY: Bot can ONLY create branches and PRs, NEVER push directly to main
+// =============================================================================
+
+// Get the SHA of the main branch (needed to create a new branch)
+async function getMainBranchSHA(): Promise<string> {
+  const result = await github("/git/ref/heads/main");
+  return result.object.sha;
+}
+
+// Create a new branch from main
+async function createBranch(branchName: string): Promise<void> {
+  const mainSHA = await getMainBranchSHA();
+  const token = await getInstallationToken();
+
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/refs`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      ref: `refs/heads/${branchName}`,
+      sha: mainSHA,
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    // Branch might already exist, that's ok
+    if (!error.includes("Reference already exists")) {
+      throw new Error(`Failed to create branch: ${error}`);
+    }
+  }
+}
+
+// Create or update a file on a branch (NOT on main - safety check built in)
+async function createFileOnBranch(
+  branchName: string,
+  filename: string,
+  content: string,
+  commitMessage: string
+): Promise<{ commitUrl: string }> {
+  // SAFETY: Never allow pushing to main
+  if (branchName === "main" || branchName === "master") {
+    throw new Error("SAFETY: Cannot push directly to main/master branch");
+  }
+
+  const token = await getInstallationToken();
+
+  // Check if file already exists (need SHA to update)
+  const existingSHA = await getFileSHA(REPO_OWNER, REPO_NAME, filename, branchName);
+
+  const res = await fetch(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filename}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: commitMessage,
+        content: Buffer.from(content).toString("base64"),
+        branch: branchName,
+        ...(existingSHA ? { sha: existingSHA } : {}),
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to create file: ${error}`);
+  }
+
+  const result = await res.json();
+  return { commitUrl: result.commit?.html_url || "" };
+}
+
+// Create a new PR
+async function createPR(
+  branchName: string,
+  title: string,
+  body: string
+): Promise<{ prNumber: number; prUrl: string }> {
+  const token = await getInstallationToken();
+
+  const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title,
+      body,
+      head: branchName,
+      base: "main",
+    }),
+  });
+
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to create PR: ${error}`);
+  }
+
+  const result = await res.json();
+  return { prNumber: result.number, prUrl: result.html_url };
+}
+
+// Find an existing open PR created by the bot for a specific discussion
+export async function findBotPRForDiscussion(discussionNumber: number): Promise<{
+  prNumber: number;
+  prUrl: string;
+  branchName: string;
+} | null> {
+  const botLogin = `${GITHUB_APP_SLUG}[bot]`;
+  const prs = await getOpenPRs();
+
+  // Look for a PR with the discussion reference in title or body
+  const discussionRef = `discussion-${discussionNumber}`;
+
+  for (const pr of prs) {
+    // Check if PR was created by the bot and references this discussion
+    if (
+      pr.user?.login === botLogin &&
+      (pr.head?.ref?.includes(discussionRef) || pr.body?.includes(`#${discussionNumber}`))
+    ) {
+      return {
+        prNumber: pr.number,
+        prUrl: pr.html_url,
+        branchName: pr.head.ref,
+      };
+    }
+  }
+
+  return null;
+}
+
+// Create a complete PR from a discussion request
+export interface CreatePRFromDiscussionResult {
+  success: boolean;
+  prNumber?: number;
+  prUrl?: string;
+  error?: string;
+  isUpdate?: boolean; // true if updated existing PR, false if created new
+}
+
+export async function createPRFromDiscussion(
+  discussionNumber: number,
+  discussionUrl: string,
+  files: { filename: string; content: string }[],
+  prTitle: string,
+  requestedBy: string
+): Promise<CreatePRFromDiscussionResult> {
+  if (files.length === 0) {
+    return { success: false, error: "No files to create" };
+  }
+
+  try {
+    // Check if there's already a PR for this discussion
+    const existingPR = await findBotPRForDiscussion(discussionNumber);
+
+    if (existingPR) {
+      // Update the existing PR
+      for (const file of files) {
+        await createFileOnBranch(
+          existingPR.branchName,
+          file.filename,
+          file.content,
+          `Update ${file.filename} per @${requestedBy}'s request\n\nFrom discussion: ${discussionUrl}`
+        );
+      }
+      return {
+        success: true,
+        prNumber: existingPR.prNumber,
+        prUrl: existingPR.prUrl,
+        isUpdate: true,
+      };
+    }
+
+    // Create a new branch and PR
+    const timestamp = Date.now();
+    const branchName = `punkmod/discussion-${discussionNumber}-${timestamp}`;
+
+    await createBranch(branchName);
+
+    // Create all files on the branch
+    for (const file of files) {
+      await createFileOnBranch(
+        branchName,
+        file.filename,
+        file.content,
+        `Add ${file.filename} via PunkModBot\n\nRequested by @${requestedBy} in discussion #${discussionNumber}`
+      );
+    }
+
+    // Create the PR with a link back to the discussion
+    const prBody = `## Submission via Discussion
+
+This PR was created by PunkModBot based on a request in [Discussion #${discussionNumber}](${discussionUrl}).
+
+**Requested by:** @${requestedBy}
+
+---
+
+*This is an automated PR. A human moderator will review before merging.*`;
+
+    const { prNumber, prUrl } = await createPR(branchName, prTitle, prBody);
+
+    return { success: true, prNumber, prUrl, isUpdate: false };
+  } catch (error) {
+    console.error("Error creating PR from discussion:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
 export async function getPRFiles(prNumber: number): Promise<PRFile[]> {
   const token = await getInstallationToken();
   const files = await github(`/pulls/${prNumber}/files`);
@@ -825,9 +1048,15 @@ Your role here is different:
 - Answer questions about how to submit projects
 - Discuss CryptoPunks lore and community stuff
 - Be helpful but concise - respect people's time
-- If someone wants to submit a project, guide them to open a PR
 - You can share opinions about punk-related topics
 - Stay on topic - this is about CryptoPunks and the Made By Punks directory
+
+IMPORTANT CAPABILITY - YOU CAN CREATE PRs:
+- If someone asks you to add their project/punk, YOU CAN DO IT!
+- You will create a Pull Request with the files - a human will review and merge
+- You NEVER modify the main branch directly - you ALWAYS create a PR
+- If info is missing, ask for it before creating the PR
+- If a PR already exists for this discussion, you'll update it instead of creating a new one
 
 IMPORTANT:
 - Keep responses SHORT (2-3 paragraphs max for most questions)
@@ -872,7 +1101,29 @@ export async function analyzeDiscussion(
     return { summary: "Bot not mentioned and not participating", shouldReply: false };
   }
 
+  const today = new Date().toISOString().split("T")[0];
+
   const prompt = `${DISCUSSION_SYSTEM_PROMPT}
+
+TODAY'S DATE: ${today}
+
+## File Formats (for when you create PRs)
+
+### Project files (content/projects/{slug}.md)
+- Filename: lowercase with hyphens (e.g., my-cool-project.md)
+- Required fields:
+  - name: string
+  - description: string (1-2 sentences)
+  - url: string (https://...)
+  - launchDate: string (YYYY-MM-DD)
+  - tags: array of strings
+  - creators: array of numbers (punk IDs, 0-9999)
+- Optional: thumbnail, links, hidden, ded, featured
+
+### Punk files (content/punks/{id}.md)
+- Filename: punk ID number (e.g., 2113.md)
+- Optional: name, links (array of URLs)
+- Body: optional markdown bio
 
 ## Discussion Details
 - **Title:** ${discussion.title}
@@ -886,14 +1137,28 @@ ${conversationHistory ? `## Conversation So Far\n${conversationHistory}` : "## T
 ## Your Task
 ${isNewDiscussion ? "This is a new discussion. Welcome the person and respond to their message." : `Respond to the latest message from @${lastComment.author.login}.`}
 
+IMPORTANT: If someone asks you to add a project or punk entry, and you have enough info, CREATE A PR!
+- You need at minimum: name, url, one creator punk ID for projects
+- If info is missing, ask for it politely
+- If you have enough, create the PR immediately
+
 Respond in JSON:
 {
   "summary": "1 sentence describing what this discussion is about",
   "shouldReply": true,
-  "reply": "Your response to post as a comment. Be helpful and conversational. Use markdown formatting if needed."
+  "reply": "Your response to post as a comment. Be helpful and conversational. Mention if you created a PR!",
+  "createPR": {
+    "title": "Add [project name] to Made By Punks",
+    "files": [
+      { "filename": "content/projects/my-project.md", "content": "---\\nname: ...\\n---" }
+    ]
+  }
 }
 
-If the discussion is spam, off-topic garbage, or you genuinely have nothing useful to add, respond with:
+The "createPR" field is OPTIONAL - only include it when you're actually creating/updating a PR.
+If you don't have enough info to create a PR, just reply asking for the missing info.
+
+If the discussion is spam, off-topic garbage, or you genuinely have nothing useful to add:
 {
   "summary": "reason why not replying",
   "shouldReply": false
@@ -915,7 +1180,7 @@ If the discussion is spam, off-topic garbage, or you genuinely have nothing usef
 // Handle a discussion event (new discussion or new comment)
 export async function handleDiscussion(
   discussionNumber: number
-): Promise<{ replied: boolean; reason?: string }> {
+): Promise<{ replied: boolean; reason?: string; prCreated?: boolean; prUrl?: string }> {
   const { discussion, comments } = await getDiscussion(discussionNumber);
 
   const result = await analyzeDiscussion(discussion, comments);
@@ -924,8 +1189,35 @@ export async function handleDiscussion(
     return { replied: false, reason: result.summary };
   }
 
+  // If Claude wants to create a PR, do it first
+  let prResult: CreatePRFromDiscussionResult | null = null;
+  if (result.createPR && result.createPR.files.length > 0) {
+    const discussionUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/discussions/${discussionNumber}`;
+
+    prResult = await createPRFromDiscussion(
+      discussionNumber,
+      discussionUrl,
+      result.createPR.files,
+      result.createPR.title,
+      discussion.author.login
+    );
+
+    // Append PR info to the reply
+    if (prResult.success && prResult.prUrl) {
+      const prAction = prResult.isUpdate ? "updated" : "created";
+      result.reply += `\n\n---\n🤖 I've ${prAction} a PR for you: ${prResult.prUrl}\n\nA human moderator will review and merge it!`;
+    } else if (prResult.error) {
+      result.reply += `\n\n---\n⚠️ I tried to create a PR but hit an error: ${prResult.error}\n\nYou might need to submit manually.`;
+    }
+  }
+
   await postDiscussionComment(discussion.id, result.reply);
-  return { replied: true };
+
+  return {
+    replied: true,
+    prCreated: prResult?.success || false,
+    prUrl: prResult?.prUrl,
+  };
 }
 
 // Webhook signature verification
