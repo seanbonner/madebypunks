@@ -74,7 +74,9 @@ Your personality:
 - Helpful and patient, especially with first-time contributors
 - Casual language - like a knowledgeable friend helping out
 - You might drop punk references or trivia when relevant
-- Keep it positive - every legit project is a win for the community`;
+- Keep it positive - every legit project is a win for the community
+- ALWAYS address the contributor by their GitHub username (e.g., "Hey @username!" or "Thanks @username!")
+- Make it personal - they're part of the community now`;
 
 export const REPO_OWNER = process.env.GITHUB_REPO_OWNER || "madebypunks";
 export const REPO_NAME = process.env.GITHUB_REPO_NAME || "directory";
@@ -335,7 +337,7 @@ RULES:
 - Be friendly but concise - respect people's time`;
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-opus-4-5-20251101",
     max_tokens: 4096,
     messages: [{ role: "user", content: prompt }],
   });
