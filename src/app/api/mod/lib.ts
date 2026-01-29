@@ -1006,12 +1006,15 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
   mimeType: string;
   extension: string;
 } | null> {
+  console.log(`[downloadImageAsBase64] Starting download from: ${imageUrl}`);
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     // Check if this is a GitHub-hosted image that might need auth
     const isGitHubImage = imageUrl.includes("github.com") || imageUrl.includes("githubusercontent.com");
+    console.log(`[downloadImageAsBase64] Is GitHub image: ${isGitHubImage}, has token: ${!!githubToken}`);
 
     const headers: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 PunkModBot",
@@ -1020,8 +1023,10 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
     // Add GitHub token for GitHub-hosted images
     if (isGitHubImage && githubToken) {
       headers["Authorization"] = `Bearer ${githubToken}`;
+      console.log(`[downloadImageAsBase64] Added GitHub auth header`);
     }
 
+    console.log(`[downloadImageAsBase64] Fetching...`);
     const res = await fetch(imageUrl, {
       signal: controller.signal,
       headers,
@@ -1030,24 +1035,34 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
 
     clearTimeout(timeoutId);
 
+    console.log(`[downloadImageAsBase64] Response: ${res.status} ${res.statusText}, final URL: ${res.url}`);
+
     if (!res.ok) {
-      console.error(`Failed to fetch image: ${res.status} ${res.statusText} from ${imageUrl}`);
+      console.error(`[downloadImageAsBase64] Failed: ${res.status} ${res.statusText}`);
+      // Log response body for debugging
+      const errorBody = await res.text();
+      console.error(`[downloadImageAsBase64] Error body (first 500 chars): ${errorBody.substring(0, 500)}`);
       return null;
     }
 
     const contentType = res.headers.get("content-type") || "";
+    console.log(`[downloadImageAsBase64] Content-Type: ${contentType}`);
 
     // Validate that we actually received an image
     if (!contentType.startsWith("image/")) {
-      console.error(`Invalid content-type for image: ${contentType} from ${imageUrl}`);
+      console.error(`[downloadImageAsBase64] Invalid content-type: ${contentType}`);
+      // Try to see what we got
+      const bodyPreview = await res.text();
+      console.error(`[downloadImageAsBase64] Body preview (first 500 chars): ${bodyPreview.substring(0, 500)}`);
       return null;
     }
 
     const buffer = await res.arrayBuffer();
+    console.log(`[downloadImageAsBase64] Downloaded ${buffer.byteLength} bytes`);
 
     // Sanity check: images should be at least a few hundred bytes
     if (buffer.byteLength < 100) {
-      console.error(`Image too small (${buffer.byteLength} bytes), likely invalid from ${imageUrl}`);
+      console.error(`[downloadImageAsBase64] Image too small (${buffer.byteLength} bytes)`);
       return null;
     }
 
@@ -1060,9 +1075,10 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
     else if (contentType.includes("webp")) extension = "webp";
     else if (contentType.includes("png")) extension = "png";
 
+    console.log(`[downloadImageAsBase64] Success - base64 length: ${base64.length}, extension: ${extension}`);
     return { base64, mimeType: contentType, extension };
   } catch (error) {
-    console.error("Error downloading image:", error);
+    console.error("[downloadImageAsBase64] Exception:", error);
     return null;
   }
 }
@@ -1097,6 +1113,8 @@ async function addImageToBranch(
   imageBase64: string,
   commitMessage: string
 ): Promise<{ success: boolean; error?: string }> {
+  console.log(`[addImageToBranch] Starting - path: ${imagePath}, branch: ${branchName}, base64 length: ${imageBase64.length}`);
+
   // SAFETY: Never allow pushing to main
   if (branchName === "main" || branchName === "master") {
     throw new Error("SAFETY: Cannot push directly to main/master branch");
@@ -1106,7 +1124,9 @@ async function addImageToBranch(
 
   // Check if file already exists
   const existingSHA = await getFileSHA(REPO_OWNER, REPO_NAME, imagePath, branchName);
+  console.log(`[addImageToBranch] Existing SHA: ${existingSHA || "(new file)"}`);
 
+  console.log(`[addImageToBranch] Committing to GitHub...`);
   const res = await fetch(
     `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${imagePath}`,
     {
@@ -1126,9 +1146,11 @@ async function addImageToBranch(
 
   if (!res.ok) {
     const error = await res.text();
+    console.error(`[addImageToBranch] GitHub API error: ${error}`);
     return { success: false, error };
   }
 
+  console.log(`[addImageToBranch] Success! Image committed to ${imagePath}`);
   return { success: true };
 }
 
@@ -1138,13 +1160,18 @@ export async function addImageToPR(
   imageUrl: string,
   projectSlug: string
 ): Promise<{ success: boolean; thumbnailPath?: string; error?: string }> {
+  console.log(`[addImageToPR] Starting - URL: ${imageUrl}, slug: ${projectSlug}, branch: ${branchName}`);
+
   // Get GitHub token for fetching GitHub-hosted images
   const token = await getInstallationToken();
   const imageData = await downloadImageAsBase64(imageUrl, token);
 
   if (!imageData) {
+    console.error(`[addImageToPR] Failed to download image from ${imageUrl}`);
     return { success: false, error: `Failed to download image from ${imageUrl}` };
   }
+
+  console.log(`[addImageToPR] Downloaded image - size: ${imageData.base64.length} chars, type: ${imageData.mimeType}, ext: ${imageData.extension}`);
 
   const thumbnailPath = `public/projects/${projectSlug}.${imageData.extension}`;
 
@@ -1636,18 +1663,23 @@ export async function handleDiscussion(
 
     // Determine image URL - either from Claude's response or try to extract from discussion
     let imageUrl = result.createPR.imageUrl;
+    console.log(`[handleDiscussion] Image URL from Claude: ${imageUrl || "(none)"}`);
 
     // If no image specified, look for images in the discussion body and comments
     if (!imageUrl) {
       const allText = discussion.body + " " + comments.map(c => c.body).join(" ");
+      console.log(`[handleDiscussion] Searching for images in text (${allText.length} chars)`);
       const foundImages = extractImageUrls(allText);
+      console.log(`[handleDiscussion] Found ${foundImages.length} images:`, foundImages);
       if (foundImages.length > 0) {
         imageUrl = foundImages[0]; // Use the first image found
+        console.log(`[handleDiscussion] Using first found image: ${imageUrl}`);
       }
     }
 
     // If still no image, try to extract OG image from project URL in the files
     if (!imageUrl && result.createPR.projectSlug) {
+      console.log(`[handleDiscussion] No image found, trying OG image extraction...`);
       // Find the project file and extract the URL
       const projectFile = result.createPR.files.find(f =>
         f.filename.includes(result.createPR!.projectSlug!)
@@ -1655,13 +1687,18 @@ export async function handleDiscussion(
       if (projectFile) {
         const urlMatch = projectFile.content.match(/url:\s*(https?:\/\/[^\s\n]+)/);
         if (urlMatch) {
+          console.log(`[handleDiscussion] Extracting OG image from: ${urlMatch[1]}`);
           const ogImage = await extractOGImage(urlMatch[1]);
+          console.log(`[handleDiscussion] OG image result: ${ogImage || "(none)"}`);
           if (ogImage) {
             imageUrl = ogImage;
           }
         }
       }
     }
+
+    console.log(`[handleDiscussion] Final image URL to use: ${imageUrl || "(none)"}`);
+    console.log(`[handleDiscussion] Project slug: ${result.createPR.projectSlug}`);
 
     prResult = await createPRFromDiscussion(
       discussionNumber,
