@@ -1000,7 +1000,8 @@ export async function extractOGImage(url: string): Promise<string | null> {
 }
 
 // Download an image and return it as base64 (for GitHub API)
-export async function downloadImageAsBase64(imageUrl: string): Promise<{
+// Uses GitHub token for GitHub-hosted images (user-attachments, etc.)
+export async function downloadImageAsBase64(imageUrl: string, githubToken?: string): Promise<{
   base64: string;
   mimeType: string;
   extension: string;
@@ -1009,17 +1010,47 @@ export async function downloadImageAsBase64(imageUrl: string): Promise<{
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+    // Check if this is a GitHub-hosted image that might need auth
+    const isGitHubImage = imageUrl.includes("github.com") || imageUrl.includes("githubusercontent.com");
+
+    const headers: Record<string, string> = {
+      "User-Agent": "Mozilla/5.0 PunkModBot",
+    };
+
+    // Add GitHub token for GitHub-hosted images
+    if (isGitHubImage && githubToken) {
+      headers["Authorization"] = `Bearer ${githubToken}`;
+    }
+
     const res = await fetch(imageUrl, {
       signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 PunkModBot" },
+      headers,
+      redirect: "follow",
     });
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`Failed to fetch image: ${res.status} ${res.statusText} from ${imageUrl}`);
+      return null;
+    }
 
-    const contentType = res.headers.get("content-type") || "image/png";
+    const contentType = res.headers.get("content-type") || "";
+
+    // Validate that we actually received an image
+    if (!contentType.startsWith("image/")) {
+      console.error(`Invalid content-type for image: ${contentType} from ${imageUrl}`);
+      return null;
+    }
+
     const buffer = await res.arrayBuffer();
+
+    // Sanity check: images should be at least a few hundred bytes
+    if (buffer.byteLength < 100) {
+      console.error(`Image too small (${buffer.byteLength} bytes), likely invalid from ${imageUrl}`);
+      return null;
+    }
+
     const base64 = Buffer.from(buffer).toString("base64");
 
     // Determine extension from content type
@@ -1107,10 +1138,12 @@ export async function addImageToPR(
   imageUrl: string,
   projectSlug: string
 ): Promise<{ success: boolean; thumbnailPath?: string; error?: string }> {
-  const imageData = await downloadImageAsBase64(imageUrl);
+  // Get GitHub token for fetching GitHub-hosted images
+  const token = await getInstallationToken();
+  const imageData = await downloadImageAsBase64(imageUrl, token);
 
   if (!imageData) {
-    return { success: false, error: "Failed to download image" };
+    return { success: false, error: `Failed to download image from ${imageUrl}` };
   }
 
   const thumbnailPath = `public/projects/${projectSlug}.${imageData.extension}`;
