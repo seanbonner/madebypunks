@@ -1018,7 +1018,10 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
     console.log(`[downloadImageAsBase64] URL type - user-attachment: ${isGitHubUserAttachment}, githubusercontent: ${isGitHubContent}`);
 
     const headers: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (compatible; PunkModBot/1.0)",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Cache-Control": "no-cache",
     };
 
     // GitHub user-attachments are PUBLIC - do NOT use auth token (it breaks the request)
@@ -1027,7 +1030,7 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
       headers["Authorization"] = `Bearer ${githubToken}`;
       console.log(`[downloadImageAsBase64] Added GitHub auth header for githubusercontent`);
     } else if (isGitHubUserAttachment) {
-      console.log(`[downloadImageAsBase64] User-attachment URL - accessing without auth (public)`);
+      console.log(`[downloadImageAsBase64] User-attachment URL - accessing as browser (no auth)`);
     }
 
     console.log(`[downloadImageAsBase64] Fetching...`);
@@ -1067,6 +1070,30 @@ export async function downloadImageAsBase64(imageUrl: string, githubToken?: stri
     // Sanity check: images should be at least a few hundred bytes
     if (buffer.byteLength < 100) {
       console.error(`[downloadImageAsBase64] Image too small (${buffer.byteLength} bytes)`);
+      return null;
+    }
+
+    // Check for GitHub's weird placeholder response (DOWNLOAD_FROM_URL:...)
+    const uint8 = new Uint8Array(buffer);
+    const textDecoder = new TextDecoder();
+    const firstBytes = textDecoder.decode(uint8.slice(0, 50));
+    console.log(`[downloadImageAsBase64] First 50 bytes as text: ${firstBytes.replace(/[^\x20-\x7E]/g, '?')}`);
+
+    if (firstBytes.includes("DOWNLOAD_FROM") || firstBytes.includes("<!DOCTYPE") || firstBytes.includes("<html")) {
+      console.error(`[downloadImageAsBase64] Received placeholder/HTML instead of image: ${firstBytes}`);
+      return null;
+    }
+
+    // Validate image magic bytes
+    const isPNG = uint8[0] === 0x89 && uint8[1] === 0x50 && uint8[2] === 0x4E && uint8[3] === 0x47;
+    const isJPEG = uint8[0] === 0xFF && uint8[1] === 0xD8 && uint8[2] === 0xFF;
+    const isGIF = uint8[0] === 0x47 && uint8[1] === 0x49 && uint8[2] === 0x46;
+    const isWebP = uint8[0] === 0x52 && uint8[1] === 0x49 && uint8[2] === 0x46 && uint8[3] === 0x46;
+
+    console.log(`[downloadImageAsBase64] Magic bytes check - PNG: ${isPNG}, JPEG: ${isJPEG}, GIF: ${isGIF}, WebP: ${isWebP}`);
+
+    if (!isPNG && !isJPEG && !isGIF && !isWebP) {
+      console.error(`[downloadImageAsBase64] Invalid image magic bytes: [${uint8[0]}, ${uint8[1]}, ${uint8[2]}, ${uint8[3]}]`);
       return null;
     }
 
