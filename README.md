@@ -150,7 +150,7 @@ Then open a pull request.
 
 ## PunkMod - Your AI Assistant
 
-<img src="https://punks.art/api/traits/003-055-020-052?background=v2&format=png" width="48" align="left" style="margin-right: 12px;">
+![PunkMod](https://punks.art/api/traits/003-055-020-052?background=v2&format=png)
 
 When you open a pull request, **PunkMod** will automatically review your submission. PunkMod is an AI bot that:
 
