@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/lib/constants";
-import { Button } from "./Button";
 import { SearchOverlay } from "./SearchOverlay";
+import { AddButton } from "./AddButton";
 import { getSearchData } from "@/data/punks";
 
 export function Header() {
@@ -16,14 +16,9 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2">
           <SearchOverlay items={searchItems} />
-          <Button href="/add" variant="primary" size="sm" className="!hidden sm:!inline-flex">
-            + Share Work
-          </Button>
-          <Button href="/add" variant="primary" size="sm" className="sm:!hidden w-9 h-9 p-0 justify-center">
-            +
-          </Button>
+          <AddButton />
         </nav>
       </div>
     </header>
