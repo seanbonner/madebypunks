@@ -1,11 +1,12 @@
 name: PunkModBot PR Review
 
 on:
-  # Toutes les 5 minutes
-  schedule:
-    - cron: '*/5 * * * *'
+  # DISABLED: API endpoint /api/mod returns 404 since Feb 3, 2026
+  # Re-enable once Vercel deployment is fixed
+  # schedule:
+  #   - cron: '*/5 * * * *'
 
-  # Ou manuellement
+  # Manual trigger only for now
   workflow_dispatch:
 
 jobs:
